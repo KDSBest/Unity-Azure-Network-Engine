@@ -1,0 +1,25 @@
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Protocol.Language" #>
+<#@ assembly name="$(TargetDir)Protocol.dll" #>
+<#@ output extension=".cs" #>
+<#
+
+string protoFile = string.Empty;
+using(StreamReader sr = new StreamReader(File.OpenRead(Path.Combine(Host.ResolvePath("Protocol"), "ChatProtocol.txt"))))
+{
+	protoFile = sr.ReadToEnd();
+}
+
+			Parser p = new Parser();
+			var messages = p.Parse(protoFile);
+
+			CodeGenerator codeGen = new CodeGenerator();
+			string code = codeGen.GenerateCode(messages);
+#>
+
+<#= code #>
