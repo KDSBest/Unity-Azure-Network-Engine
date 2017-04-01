@@ -83,52 +83,6 @@ Factory.Get<IProtocolSerializable<{0}>>().Deserialize(ref local{1}, reader);
 {1} = local{1};
 ";
 
-		/*
-
-		public class TestPackage : IProtocolPacket
-		{
-			public byte PacketType
-			{
-				get
-				{
-					return 1;
-				}
-			}
-
-			public string StrTest { get; set; }
-
-			public int IntTest { get; set; }
-
-			public byte ByteTest { get; set; }
-
-			public double DoubleTest { get; set; }
-
-			public void Serialize(UdpDataWriter writer)
-			{
-				writer.Put(PacketType);
-				writer.Put(StrTest);
-				writer.Put(IntTest);
-				writer.Put(ByteTest);
-				writer.Put(DoubleTest);
-			}
-
-			public bool Deserialize(UdpDataReader reader)
-			{
-				if (reader.PeekByte() != PacketType)
-					return false;
-
-				reader.GetByte();
-
-				StrTest = reader.GetString();
-				IntTest = reader.GetInt();
-				ByteTest = reader.GetByte();
-				DoubleTest = reader.GetDouble();
-
-				return true;
-			}
-		}
-		 */
-
 		public string GenerateCode(List<Message> messages)
 		{
 			string code = string.Empty;

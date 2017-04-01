@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{993981B3-7FA8-4323-9F60-1A42AE0EB05B}</ProjectGuid>
+    <ProjectGuid>{993981B3-7FA8-4323-9F60-1AAAAE0EB05B}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>ChatSample</RootNamespace>
@@ -52,6 +52,11 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ClientListener.cs" />
+    <Compile Include="ProtocolListener.designer.cs">
+      <DependentUpon>ProtocolListener.tt</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
     <Compile Include="Protocol.designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -81,6 +86,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\EventSystem\EventSystem.csproj">
+      <Project>{18e960ee-1794-4bad-bf47-c54e17e4ff13}</Project>
+      <Name>EventSystem</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Core\Protocol\Protocol.csproj">
       <Project>{ee853bf5-3db2-4a1b-8806-07b3b36edcce}</Project>
       <Name>Protocol</Name>
@@ -95,6 +104,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="ProtocolListener.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ProtocolListener.designer.cs</LastGenOutput>
+    </Content>
     <Content Include="Protocol.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Protocol.designer.cs</LastGenOutput>

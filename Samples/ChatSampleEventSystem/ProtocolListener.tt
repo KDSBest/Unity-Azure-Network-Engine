@@ -6,6 +6,7 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ import namespace="Protocol.Language" #>
 <#@ assembly name="$(TargetDir)Protocol.dll" #>
+<#@ assembly name="$(TargetDir)EventSystem.dll" #>
 <#@ output extension=".designer.cs" #>
 <#
 
@@ -18,7 +19,7 @@ using(StreamReader sr = new StreamReader(File.OpenRead(Path.Combine(Host.Resolve
 			Parser p = new Parser();
 			var messages = p.Parse(protoFile);
 
-			var codeGen = new CodeGenerator();
+			var codeGen = new EventSystem.CodeGenerator();
 			string code = codeGen.GenerateCode(messages);
 #>
 
