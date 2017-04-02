@@ -4,6 +4,9 @@
 	using System.Collections.Generic;
 	using System.Runtime.CompilerServices;
 
+	using EventSystem;
+	using EventSystem.Events;
+
 	using Protocol;
 
 	using ReliableUdp;
@@ -75,7 +78,7 @@
 
 				if (!settings.IsServer)
 				{
-					if(string.IsNullOrEmpty(result))
+					if (string.IsNullOrEmpty(result))
 						continue;
 
 					if (result.StartsWith("/nick "))
@@ -141,43 +144,57 @@
 			else
 			{
 				bool connecting = true;
-				var clListener = new ClientListener((connectingResult) =>
-															 {
-																 isConnected = connectingResult;
-																 connecting = false;
-															 });
-				clListener.HandleChatMessage = (message, peer, arg3) =>
-					{
-						string name = message.Sender.ToString();
-						if (Names.ContainsKey(message.Sender))
-							name = Names[message.Sender];
-						Console.Write(name + ": ");
-						foreach (string line in message.Message)
-						{
-							Console.WriteLine(line);
-						}
-					};
-				clListener.HandleWhisperMessage = (message, peer, arg3) =>
-				{
-					string name = message.Sender.ToString();
-					if (Names.ContainsKey(message.Sender))
-						name = Names[message.Sender];
-					Console.Write("[Whisper] " + name + ": ");
-					foreach (string line in message.Message.Message)
-					{
-						Console.WriteLine(line);
-					}
-				};
-				clListener.HandleNickMessage = (message, peer, arg3) =>
-					{
-						if (string.IsNullOrEmpty(message.NewNick))
-							return;
+				var clListener = new ProtocolListener();
+				PubSub<NetworkConnectedEvent>.Subscribe("Client",
+																	 ev =>
+																		 {
+																			 Console.WriteLine("Connected.");
+																			 isConnected = true;
+																			 connecting = false;
+																		 });
+				PubSub<NetworkDisconnectedEvent>.Subscribe("Client",
+																	 ev =>
+																	 {
+																		 Console.WriteLine("Disconnected.");
+																		 isConnected = false;
+																		 connecting = false;
+																		 isRunning = false;
+																	 });
+				PubSub<NetworkReceiveEvent<ServerChatMessage>>.Subscribe("Client",
+																							 ev =>
+																								 {
+																									 string name = ev.Packet.Sender.ToString();
+																									 if (Names.ContainsKey(ev.Packet.Sender))
+																										 name = Names[ev.Packet.Sender];
+																									 Console.Write(name + ": ");
+																									 foreach (string line in ev.Packet.Message)
+																									 {
+																										 Console.WriteLine(line);
+																									 }
+																								 });
+				PubSub<NetworkReceiveEvent<ServerWhisper>>.Subscribe("Client",
+																							 ev =>
+																							 {
+																								 string name = ev.Packet.Sender.ToString();
+																								 if (Names.ContainsKey(ev.Packet.Sender))
+																									 name = Names[ev.Packet.Sender];
+																								 Console.Write("[Whisper] " + name + ": ");
+																								 foreach (string line in ev.Packet.Message.Message)
+																								 {
+																									 Console.WriteLine(line);
+																								 }
+																							 });
+				PubSub<NetworkReceiveEvent<ServerChangeNick>>.Subscribe("Client",
+																							 ev =>
+																							 {
+																								 if (string.IsNullOrEmpty(ev.Packet.NewNick))
+																									 return;
 
-						if (Names.ContainsKey(message.Sender))
-							Names[message.Sender] = message.NewNick;
-						else
-							Names.Add(message.Sender, message.NewNick);
-					};
+																								 if (Names.ContainsKey(ev.Packet.Sender))
+																									 Names[ev.Packet.Sender] = ev.Packet.NewNick;
+																								 else
+																									 Names.Add(ev.Packet.Sender, ev.Packet.NewNick);
+																							 });
 				listener = clListener;
 				manager = new UdpManager(listener, "chat");
 				manager.Connect(settings.Host, settings.Port);

@@ -51,7 +51,6 @@
     <Compile Include="ChatSettings.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ClientListener.cs" />
     <Compile Include="ProtocolListener.designer.cs">
       <DependentUpon>ProtocolListener.tt</DependentUpon>
       <AutoGen>True</AutoGen>
