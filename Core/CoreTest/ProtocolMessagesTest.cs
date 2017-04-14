@@ -15,6 +15,8 @@ namespace CoreTest
 	{
 		private class ClientListener : IUdpEventListener
 		{
+			public UdpManager UdpManager { get; set; }
+
 			private ChannelType channel;
 
 			public ClientListener(ChannelType channel)
@@ -78,6 +80,8 @@ namespace CoreTest
 
 		private class ServerListener : IUdpEventListener
 		{
+			public UdpManager UdpManager { get; set; }
+
 			public UdpManager Server;
 
 			public void OnPeerConnected(UdpPeer peer)

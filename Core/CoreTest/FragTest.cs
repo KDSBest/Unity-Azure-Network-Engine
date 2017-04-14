@@ -16,6 +16,11 @@ namespace CoreTest
 
 		private class ClientListener : IUdpEventListener
 		{
+			public bool IsTestRecOk { get; set; }
+			public bool IsTestAckOk { get; set; }
+
+			public UdpManager UdpManager { get; set; }
+
 			public void OnPeerConnected(UdpPeer peer)
 			{
 				Console.WriteLine("[Client] connected to: {0}:{1}", peer.EndPoint.Host, peer.EndPoint.Port);
@@ -42,6 +47,7 @@ namespace CoreTest
 				if (reader.AvailableBytes == 13218)
 				{
 					Console.WriteLine("[{0}] TestFrag: {1}, {2}", peer.UdpManager.LocalEndPoint.Port, reader.Data[0], reader.Data[13217]);
+					this.IsTestRecOk = true;
 				}
 				else
 				{
@@ -58,6 +64,7 @@ namespace CoreTest
 				if (reader.AvailableBytes == 13218)
 				{
 					Console.WriteLine("[Client] Ack TestFrag: {0}, {1}", reader.Data[0], reader.Data[13217]);
+					this.IsTestAckOk = true;
 				}
 				else
 				{
@@ -78,6 +85,10 @@ namespace CoreTest
 
 		private class ServerListener : IUdpEventListener
 		{
+			public bool IsTestRecOk { get; set; }
+			public bool IsTestAckOk { get; set; }
+
+			public UdpManager UdpManager { get; set; }
 			public UdpManager Server;
 
 			public void OnPeerConnected(UdpPeer peer)
@@ -109,6 +120,7 @@ namespace CoreTest
 				if (reader.AvailableBytes == 13218)
 				{
 					Console.WriteLine("[Server] TestFrag: {0}, {1}", reader.Data[0], reader.Data[13217]);
+					this.IsTestRecOk = true;
 				}
 				else
 					Assert.Fail("Wrong Byte Count");
@@ -119,6 +131,7 @@ namespace CoreTest
 				if (reader.AvailableBytes == 13218)
 				{
 					Console.WriteLine("[{0}] Ack TestFrag: {1}, {2}", peer.UdpManager.LocalEndPoint.Port, reader.Data[0], reader.Data[13217]);
+					this.IsTestAckOk = true;
 				}
 				else
 				{
@@ -171,22 +184,23 @@ namespace CoreTest
 			}
 			client1.Connect("127.0.0.1", 9050);
 
-			UdpManager client2 = new UdpManager(this.clientListener, "myapp1");
-			//client2.SimulateLatency = true;
-			client2.SimulationMaxLatency = 1500;
-			client2.Start();
-			client2.Connect("::1", 9050);
+			//UdpManager client2 = new UdpManager(this.clientListener, "myapp1");
+			////client2.SimulateLatency = true;
+			//client2.SimulationMaxLatency = 1500;
+			//client2.Start();
+			//client2.Connect("::1", 9050);
 
-			for (int i = 0; i < 2000; i++)
+			bool allOk = false;
+
+			for (int i = 0; i < 2000 && !allOk; i++)
 			{
 				client1.PollEvents();
-				client2.PollEvents();
 				server.PollEvents();
+				allOk = this.clientListener.IsTestRecOk && this.clientListener.IsTestAckOk && this.serverListener.IsTestAckOk && this.serverListener.IsTestAckOk;
 				Thread.Sleep(15);
 			}
 
 			client1.Stop();
-			client2.Stop();
 			server.Stop();
 		}
 	}
