@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2015
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JitterTools", "JitterTools.csproj", "{0A7F4C08-0395-809A-D99A-683061BD42C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JitterTools.Editor", "JitterTools.Editor.csproj", "{876D789F-658A-7BE0-1BF6-A2D26019B328}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0A7F4C08-0395-809A-D99A-683061BD42C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A7F4C08-0395-809A-D99A-683061BD42C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A7F4C08-0395-809A-D99A-683061BD42C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A7F4C08-0395-809A-D99A-683061BD42C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{876D789F-658A-7BE0-1BF6-A2D26019B328}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{876D789F-658A-7BE0-1BF6-A2D26019B328}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{876D789F-658A-7BE0-1BF6-A2D26019B328}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{876D789F-658A-7BE0-1BF6-A2D26019B328}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
