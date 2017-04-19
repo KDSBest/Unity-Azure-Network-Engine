@@ -51,7 +51,7 @@ namespace ReliableUdp.NetworkStatistic
 			this.rtt = 0;
 		}
 
-		public void PacketReceived()
+		public void ResetTimeSinceLastPacket()
 		{
 			this.timeSinceLastPacket = 0;
 		}

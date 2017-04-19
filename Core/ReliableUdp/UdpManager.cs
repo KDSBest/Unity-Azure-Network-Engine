@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using ReliableUdp.Simulation;
+using ReliableUdp.PacketHandler;
 
 using Factory = Utility.Factory;
 
@@ -20,6 +20,8 @@ namespace ReliableUdp
 
 	public sealed class UdpManager
 	{
+		public const int DEFAULT_UPDATE_TIME = 15;
+
 		public delegate void OnMessageReceived(byte[] data, int length, int errorCode, UdpEndPoint remoteEndPoint);
 
 		private readonly UdpSocket socket;
@@ -32,18 +34,12 @@ namespace ReliableUdp
 
 		private readonly UdpPeerCollection peers;
 		private readonly int maxConnections;
-		private readonly string connectKey;
 
 		private readonly UdpPacketPool netPacketPool;
 
 		public int UpdateTime { get { return this.logicThread.SleepTime; } set { this.logicThread.SleepTime = value; } }
-		public long DisconnectTimeout = 5000;
-		public int ReconnectDelay = 500;
-		public int MaxConnectAttempts = 10;
-		public bool ReuseAddress = false;
 
-		public INetworkSimulation NetworkSimulation = null;
-		private const int DEFAULT_UPDATE_TIME = 15;
+		public UdpSettings Settings = new UdpSettings();
 
 		//stats
 		public ulong PacketsSent { get; private set; }
@@ -75,11 +71,6 @@ namespace ReliableUdp
 			get { return this.peers.Count; }
 		}
 
-		public string ConnectKey
-		{
-			get { return this.connectKey; }
-		}
-
 		public UdpPacketPool PacketPool
 		{
 			get { return this.netPacketPool; }
@@ -100,10 +91,9 @@ namespace ReliableUdp
 			this.netEventsPool = new Stack<UdpEvent>();
 			this.netPacketPool = new UdpPacketPool();
 
-			this.connectKey = connectKey;
+			this.Settings.ConnectKey = connectKey;
 			this.peers = new UdpPeerCollection(maxConnections);
 			this.maxConnections = maxConnections;
-			this.connectKey = connectKey;
 			listener.UdpManager = this;
 		}
 
@@ -211,7 +201,7 @@ namespace ReliableUdp
 			this.peers.RemoveAt(idx);
 		}
 
-		private UdpEvent CreateEvent(UdpEventType type)
+		public UdpEvent CreateEvent(UdpEventType type)
 		{
 			UdpEvent evt = null;
 
@@ -230,7 +220,7 @@ namespace ReliableUdp
 			return evt;
 		}
 
-		private void EnqueueEvent(UdpEvent evt)
+		public void EnqueueEvent(UdpEvent evt)
 		{
 			lock (this.netEventsQueue)
 			{
@@ -285,9 +275,9 @@ namespace ReliableUdp
 
 		private void Update()
 		{
-			if (this.NetworkSimulation != null)
+			if (this.Settings.NetworkSimulation != null)
 			{
-				NetworkSimulation.Update(this.DataReceived);
+				this.Settings.NetworkSimulation.Update(this.DataReceived);
 			}
 
 			//Process acks
@@ -297,9 +287,9 @@ namespace ReliableUdp
 				for (int i = 0; i < this.peers.Count; i++)
 				{
 					var udpPeer = this.peers[i];
-					if (udpPeer.ConnectionState == ConnectionState.Connected && udpPeer.NetworkStatisticManagement.TimeSinceLastPacket > DisconnectTimeout)
+					if (udpPeer.ConnectionState == ConnectionState.Connected && udpPeer.NetworkStatisticManagement.TimeSinceLastPacket > this.Settings.DisconnectTimeout)
 					{
-						Factory.Get<IUdpLogger>().Log($"Disconnect by timeout {udpPeer.NetworkStatisticManagement.TimeSinceLastPacket} > {DisconnectTimeout}");
+						Factory.Get<IUdpLogger>().Log($"Disconnect by timeout {udpPeer.NetworkStatisticManagement.TimeSinceLastPacket} > {this.Settings.DisconnectTimeout}");
 						var netEvent = CreateEvent(UdpEventType.Disconnect);
 						netEvent.Peer = udpPeer;
 						netEvent.DisconnectReason = DisconnectReason.Timeout;
@@ -333,9 +323,9 @@ namespace ReliableUdp
 			{
 				bool receivePacket = true;
 
-				if (this.NetworkSimulation != null)
+				if (this.Settings.NetworkSimulation != null)
 				{
-					receivePacket = NetworkSimulation.HandlePacket(data, length, remoteEndPoint);
+					receivePacket = this.Settings.NetworkSimulation.HandlePacket(data, length, remoteEndPoint);
 				}
 
 				if (receivePacket)
@@ -373,22 +363,18 @@ namespace ReliableUdp
 				return;
 			}
 
-			//Check normal packets
 			UdpPeer udpPeer;
 
-			//Check peers
 			Monitor.Enter(this.peers);
 			int peersCount = this.peers.Count;
 
 			if (this.peers.TryGetValue(remoteEndPoint, out udpPeer))
 			{
 				Monitor.Exit(this.peers);
-				//Send
 				if (packet.Type == PacketType.Disconnect)
 				{
 					if (System.BitConverter.ToInt64(packet.RawData, 1) != udpPeer.ConnectId)
 					{
-						//Old or incorrect disconnect
 						this.netPacketPool.Recycle(packet);
 						return;
 					}
@@ -400,17 +386,6 @@ namespace ReliableUdp
 					EnqueueEvent(netEvent);
 
 					this.peers.Remove(udpPeer.EndPoint);
-					//do not recycle because no sense)
-				}
-				else if (packet.Type == PacketType.ConnectAccept)
-				{
-					if (udpPeer.ProcessConnectAccept(packet))
-					{
-						var connectEvent = CreateEvent(UdpEventType.Connect);
-						connectEvent.Peer = udpPeer;
-						EnqueueEvent(connectEvent);
-					}
-					this.netPacketPool.Recycle(packet);
 				}
 				else
 				{
@@ -424,14 +399,14 @@ namespace ReliableUdp
 				if (peersCount < this.maxConnections && packet.Type == PacketType.ConnectRequest)
 				{
 					int protoId = System.BitConverter.ToInt32(packet.RawData, 1);
-					if (protoId != UdpPeer.PROTOCOL_ID)
+					if (protoId != ConnectionRequestHandler.PROTOCOL_ID)
 					{
 						Factory.Get<IUdpLogger>().Log($"Peer connect rejected. Invalid Protocol Id.");
 						return;
 					}
 
 					string peerKey = Encoding.UTF8.GetString(packet.RawData, 13, packet.Size - 13);
-					if (peerKey != this.connectKey)
+					if (peerKey != this.Settings.ConnectKey)
 					{
 						Factory.Get<IUdpLogger>().Log($"Peer connect rejected. Invalid key {peerKey}.");
 						return;
@@ -607,7 +582,7 @@ namespace ReliableUdp
 			}
 
 			this.netEventsQueue.Clear();
-			if (!this.socket.Bind(port, ReuseAddress))
+			if (!this.socket.Bind(port, this.Settings.ReuseAddress))
 				return false;
 
 			this.logicThread.Start();

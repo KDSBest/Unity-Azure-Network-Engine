@@ -55,6 +55,7 @@
     <Compile Include="Enums\DisconnectReason.cs" />
     <Compile Include="BitUtility\BitHelper.cs" />
     <Compile Include="NetworkStatistic\FlowManagement.cs" />
+    <Compile Include="PacketHandler\ConnectionRequestHandler.cs" />
     <Compile Include="PacketHandler\MergeHandler.cs" />
     <Compile Include="PacketHandler\MtuHandler.cs" />
     <Compile Include="PacketHandler\PingPongHandler.cs" />
@@ -65,6 +66,7 @@
     <Compile Include="Simulation\NetworkLatencySimulation.cs" />
     <Compile Include="Simulation\NetworkLossAndLatencySimulation.cs" />
     <Compile Include="Simulation\NetworkPacketLossSimulation.cs" />
+    <Compile Include="UdpSettings.cs" />
     <Compile Include="Utility\FlowMode.cs" />
     <Compile Include="Const\HeaderSize.cs" />
     <Compile Include="Utility\IncomingFragments.cs" />

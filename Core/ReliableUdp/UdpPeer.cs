@@ -36,32 +36,33 @@ namespace ReliableUdp
 		public PingPongHandler PacketPingPongHandler { get; set; }
 		public MtuHandler PacketMtuHandler { get; set; }
 		public MergeHandler PacketMergeHandler { get; set; }
-
-		public const int PROTOCOL_ID = 1;
+		public ConnectionRequestHandler PacketConnectionRequestHandler { get; set; }
 
 		private ushort fragmentId;
 		private readonly Dictionary<ushort, IncomingFragments> holdedFragments = new Dictionary<ushort, IncomingFragments>();
 		private readonly Dictionary<ushort, IncomingFragments> holdedFragmentsForAck = new Dictionary<ushort, IncomingFragments>();
 
-		// Connection
-		private int connectAttempts;
-		private int connectTimer;
-		private long connectId;
-		private ConnectionState connectionState = ConnectionState.InProgress;
-
 		public ConnectionState ConnectionState
 		{
-			get { return this.connectionState; }
+			get { return this.PacketConnectionRequestHandler.ConnectionState; }
 		}
 
 		public long ConnectId
 		{
-			get { return this.connectId; }
+			get { return this.PacketConnectionRequestHandler.ConnectId; }
 		}
 
 		public UdpManager UdpManager
 		{
 			get { return this.peerListener; }
+		}
+
+		public UdpSettings Settings
+		{
+			get
+			{
+				return UdpManager.Settings;
+			}
 		}
 
 		public UdpPeer(UdpManager peerListener, UdpEndPoint endPoint, long connectId)
@@ -75,6 +76,8 @@ namespace ReliableUdp
 			this.PacketMtuHandler = new MtuHandler();
 			this.PacketMergeHandler = new MergeHandler();
 			this.PacketMergeHandler.Initialize(this);
+			this.PacketConnectionRequestHandler = new ConnectionRequestHandler();
+			this.PacketConnectionRequestHandler.Initialize(this, connectId);
 
 			this.Channels.Add(ChannelType.Unreliable, Factory.Get<IUnreliableChannel>());
 			this.Channels.Add(ChannelType.UnreliableOrdered, Factory.Get<IUnreliableOrderedChannel>());
@@ -85,60 +88,6 @@ namespace ReliableUdp
 			{
 				chan.Initialize(this);
 			}
-
-			this.connectAttempts = 0;
-			if (connectId == 0)
-			{
-				this.connectId = DateTime.UtcNow.Ticks;
-				this.SendConnectRequest();
-			}
-			else
-			{
-				this.connectId = connectId;
-				this.connectionState = ConnectionState.Connected;
-				this.SendConnectAccept();
-			}
-
-			Factory.Get<IUdpLogger>().Log($"Connection Id is {this.connectId}.");
-		}
-
-		private void SendConnectRequest()
-		{
-			byte[] keyData = Encoding.UTF8.GetBytes(this.peerListener.ConnectKey);
-
-			var connectPacket = this.packetPool.Get(PacketType.ConnectRequest, 12 + keyData.Length);
-
-			BitHelper.GetBytes(connectPacket.RawData, 1, PROTOCOL_ID);
-			BitHelper.GetBytes(connectPacket.RawData, 5, this.connectId);
-			Buffer.BlockCopy(keyData, 0, connectPacket.RawData, 13, keyData.Length);
-
-			this.peerListener.SendRawAndRecycle(connectPacket, this.EndPoint);
-		}
-
-		private void SendConnectAccept()
-		{
-			this.NetworkStatisticManagement.PacketReceived();
-
-			var connectPacket = this.packetPool.Get(PacketType.ConnectAccept, 8);
-			BitHelper.GetBytes(connectPacket.RawData, 1, this.connectId);
-			this.peerListener.SendRawAndRecycle(connectPacket, this.EndPoint);
-		}
-
-		public bool ProcessConnectAccept(UdpPacket packet)
-		{
-			if (this.connectionState != ConnectionState.InProgress)
-				return false;
-
-			// check connection id
-			if (BitConverter.ToInt64(packet.RawData, 1) != this.connectId)
-			{
-				return false;
-			}
-
-			Factory.Get<IUdpLogger>().Log("Received Connection accepted.");
-			this.NetworkStatisticManagement.PacketReceived();
-			this.connectionState = ConnectionState.Connected;
-			return true;
 		}
 
 		private static PacketType SendOptionsToProperty(ChannelType options)
@@ -440,42 +389,30 @@ namespace ReliableUdp
 		// Process incoming packet
 		public void ProcessPacket(UdpPacket packet)
 		{
-			this.NetworkStatisticManagement.PacketReceived();
+			this.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 
 			Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
 			switch (packet.Type)
 			{
-				case PacketType.ConnectRequest:
-					// response with connect
-					long newId = BitConverter.ToInt64(packet.RawData, 1);
-					if (newId > this.connectId)
-					{
-						this.connectId = newId;
-					}
-
-					Factory.Get<IUdpLogger>().Log($"Connect Request Last Id {this.ConnectId} NewId {newId} EP {this.EndPoint}");
-					this.SendConnectAccept();
-					this.packetPool.Recycle(packet);
+				case PacketType.ConnectAccept:
+					this.PacketConnectionRequestHandler.ProcessAcceptPacket(this, packet);
 					break;
-
+				case PacketType.ConnectRequest:
+					this.PacketConnectionRequestHandler.ProcessPacket(this, packet);
+					break;
 				case PacketType.Merged:
 					this.PacketMergeHandler.ProcessPacket(this, packet);
 					break;
-
 				case PacketType.Ping:
 					this.PacketPingPongHandler.HandlePing(this, packet);
 					break;
-
 				case PacketType.Pong:
 					this.PacketPingPongHandler.HandlePong(this, packet);
 					break;
-
-				// Process ack
 				case PacketType.AckReliable:
 					this.Channels[ChannelType.Reliable].ProcessAck(packet);
 					this.packetPool.Recycle(packet);
 					break;
-
 				case PacketType.AckReliableOrdered:
 					this.Channels[ChannelType.ReliableOrdered].ProcessAck(packet);
 					this.packetPool.Recycle(packet);
@@ -492,7 +429,6 @@ namespace ReliableUdp
 				case PacketType.Unreliable:
 					this.Channels[ChannelType.Unreliable].ProcessPacket(packet);
 					return;
-
 				case PacketType.MtuCheck:
 				case PacketType.MtuOk:
 					this.PacketMtuHandler.ProcessMtuPacket(this, packet);
@@ -555,30 +491,8 @@ namespace ReliableUdp
 
 		public void Update(int deltaTime)
 		{
-			if (this.connectionState == ConnectionState.Disconnected)
-			{
+			if (!this.PacketConnectionRequestHandler.Update(this, deltaTime))
 				return;
-			}
-
-			if (this.connectionState == ConnectionState.InProgress)
-			{
-				this.connectTimer += deltaTime;
-				if (this.connectTimer > this.peerListener.ReconnectDelay)
-				{
-					this.connectTimer = 0;
-					this.connectAttempts++;
-					if (this.connectAttempts > this.peerListener.MaxConnectAttempts)
-					{
-						this.connectionState = ConnectionState.Disconnected;
-						return;
-					}
-
-					// else send connect again
-					this.SendConnectRequest();
-				}
-
-				return;
-			}
 
 			int currentMaxSend = this.NetworkStatisticManagement.FlowManagement.GetCurrentMaxSend(deltaTime);
 
@@ -618,6 +532,16 @@ namespace ReliableUdp
 		public UdpPacket GetAndRead(byte[] packetRawData, int pos, ushort size)
 		{
 			return this.packetPool.GetAndRead(packetRawData, pos, size);
+		}
+
+		public UdpEvent CreateEvent(UdpEventType type)
+		{
+			return this.peerListener.CreateEvent(type);
+		}
+
+		public void EnqueueEvent(UdpEvent evt)
+		{
+			this.peerListener.EnqueueEvent(evt);
 		}
 	}
 }
