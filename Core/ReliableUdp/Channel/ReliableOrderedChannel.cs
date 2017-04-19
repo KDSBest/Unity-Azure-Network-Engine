@@ -19,9 +19,9 @@ namespace ReliableUdp.Channel
 	public sealed class ReliableOrderedChannel : IReliableOrderedChannel
 	{
 		private readonly Queue<UdpPacket> outgoingPackets;
-		private readonly bool[] outgoingAcks;               //for send acks
-		private readonly PendingPacket[] pendingPackets;    //for unacked packets and duplicates
-		private readonly UdpPacket[] receivedPackets;       //for order
+		private readonly bool[] outgoingAcks;
+		private readonly PendingPacket[] pendingPackets;
+		private readonly UdpPacket[] receivedPackets;
 
 		private SequenceNumber localSeqence = new SequenceNumber(0);
 		private SequenceNumber remoteSequence = new SequenceNumber(0);

@@ -138,9 +138,7 @@ namespace ReliableUdp.PacketHandler
 		{
 			if (ProcessConnectAccept(peer, packet))
 			{
-				var connectEvent = peer.CreateEvent(UdpEventType.Connect);
-				connectEvent.Peer = peer;
-				peer.EnqueueEvent(connectEvent);
+				peer.UdpManager.CreateConnectEvent(peer);
 			}
 
 			peer.Recycle(packet);

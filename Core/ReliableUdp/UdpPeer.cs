@@ -275,7 +275,6 @@ namespace ReliableUdp
 			int currentSended = 0;
 			while (currentSended < currentMaxSend)
 			{
-				// Get one of packets
 				if (this.Channels[ChannelType.ReliableOrdered].SendNextPacket() ||
 					 this.Channels[ChannelType.Reliable].SendNextPacket() ||
 					 this.Channels[ChannelType.UnreliableOrdered].SendNextPacket() ||
@@ -285,7 +284,6 @@ namespace ReliableUdp
 				}
 				else
 				{
-					// no outgoing packets
 					break;
 				}
 			}
@@ -344,11 +342,6 @@ namespace ReliableUdp
 		public UdpPacket GetAndRead(byte[] packetRawData, int pos, ushort size)
 		{
 			return this.packetPool.GetAndRead(packetRawData, pos, size);
-		}
-
-		public UdpEvent CreateEvent(UdpEventType type)
-		{
-			return this.peerListener.CreateEvent(type);
 		}
 
 		public void EnqueueEvent(UdpEvent evt)
