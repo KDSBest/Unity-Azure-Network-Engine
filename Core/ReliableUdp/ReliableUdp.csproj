@@ -54,6 +54,10 @@
     <Compile Include="DisconnectInfo.cs" />
     <Compile Include="Enums\DisconnectReason.cs" />
     <Compile Include="BitUtility\BitHelper.cs" />
+    <Compile Include="NetworkStatistic\FlowManagement.cs" />
+    <Compile Include="PacketHandler\MergeHandler.cs" />
+    <Compile Include="PacketHandler\MtuHandler.cs" />
+    <Compile Include="PacketHandler\PingPongHandler.cs" />
     <Compile Include="Packet\IProtocolPacket.cs" />
     <Compile Include="NetworkStatistic\NetworkStatisticManagement.cs" />
     <Compile Include="Simulation\IncomingData.cs" />

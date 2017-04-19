@@ -20,6 +20,16 @@
 			this.Value = value;
 		}
 
+		public override int GetHashCode()
+		{
+			return this.Value;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return this == obj;
+		}
+
 		public static bool operator !=(SequenceNumber a, SequenceNumber b)
 		{
 			return !(a == b);

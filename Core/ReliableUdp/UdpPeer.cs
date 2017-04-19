@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 
 using ReliableUdp.NetworkStatistic;
+using ReliableUdp.PacketHandler;
 
 using Factory = Utility.Factory;
 
@@ -11,50 +12,38 @@ namespace ReliableUdp
 {
 	using System.Runtime.Serialization;
 
-	using ReliableUdp.BitUtility;
-	using ReliableUdp.Channel;
-	using ReliableUdp.Const;
-	using ReliableUdp.Enums;
-	using ReliableUdp.Logging;
-	using ReliableUdp.Packet;
-	using ReliableUdp.Utility;
+	using BitUtility;
+	using Channel;
+	using Const;
+	using Enums;
+	using Logging;
+	using Packet;
+	using Utility;
 
 	public class UdpPeer
 	{
-		//Common            
-		private readonly UdpEndPoint remoteEndPoint;
+		// Common            
 		private readonly UdpManager peerListener;
 		private readonly UdpPacketPool packetPool;
 		private readonly object flushLock = new object();
 
-		//Channels
+		public UdpEndPoint EndPoint { get; private set; }
+
+		// Channels
 		public Dictionary<ChannelType, IChannel> Channels = new Dictionary<ChannelType, IChannel>();
 
 		public NetworkStatisticManagement NetworkStatisticManagement { get; set; }
-
-		//MTU
-		private int mtu = Const.Mtu.PossibleValues[0];
-		private int mtuIdx;
-		private bool finishMtu;
-		private int mtuCheckTimer;
-		private int mtuCheckAttempts;
-		private const int MTU_CHECK_DELAY = 1000;
-		private const int MAX_MTU_CHECK_ATTEMPTS = 4;
+		public PingPongHandler PacketPingPongHandler { get; set; }
+		public MtuHandler PacketMtuHandler { get; set; }
+		public MergeHandler PacketMergeHandler { get; set; }
 
 		public const int PROTOCOL_ID = 1;
-
-		private readonly object mtuMutex = new object();
 
 		private ushort fragmentId;
 		private readonly Dictionary<ushort, IncomingFragments> holdedFragments = new Dictionary<ushort, IncomingFragments>();
 		private readonly Dictionary<ushort, IncomingFragments> holdedFragmentsForAck = new Dictionary<ushort, IncomingFragments>();
 
-		//Merging
-		private readonly UdpPacket mergeData;
-		private int mergePos;
-		private int mergeCount;
-
-		//Connection
+		// Connection
 		private int connectAttempts;
 		private int connectTimer;
 		private long connectId;
@@ -70,57 +59,44 @@ namespace ReliableUdp
 			get { return this.connectId; }
 		}
 
-		public UdpEndPoint EndPoint
-		{
-			get { return this.remoteEndPoint; }
-		}
-
-		public int Mtu
-		{
-			get { return this.mtu; }
-		}
-
 		public UdpManager UdpManager
 		{
 			get { return this.peerListener; }
 		}
 
-		/// <summary>
-		/// Application defined object containing data about the connection
-		/// </summary>
-		public object Tag;
-
-		public UdpPeer(UdpManager peerListener, UdpEndPoint remoteEndPoint, long connectId)
+		public UdpPeer(UdpManager peerListener, UdpEndPoint endPoint, long connectId)
 		{
-			this.NetworkStatisticManagement = new NetworkStatisticManagement();
 			this.packetPool = peerListener.PacketPool;
 			this.peerListener = peerListener;
-			this.remoteEndPoint = remoteEndPoint;
+			this.EndPoint = endPoint;
 
-			Channels.Add(ChannelType.Unreliable, Factory.Get<IUnreliableChannel>());
-			Channels.Add(ChannelType.UnreliableOrdered, Factory.Get<IUnreliableOrderedChannel>());
-			Channels.Add(ChannelType.Reliable, Factory.Get<IReliableChannel>());
-			Channels.Add(ChannelType.ReliableOrdered, Factory.Get<IReliableOrderedChannel>());
+			this.NetworkStatisticManagement = new NetworkStatisticManagement();
+			this.PacketPingPongHandler = new PingPongHandler();
+			this.PacketMtuHandler = new MtuHandler();
+			this.PacketMergeHandler = new MergeHandler();
+			this.PacketMergeHandler.Initialize(this);
+
+			this.Channels.Add(ChannelType.Unreliable, Factory.Get<IUnreliableChannel>());
+			this.Channels.Add(ChannelType.UnreliableOrdered, Factory.Get<IUnreliableOrderedChannel>());
+			this.Channels.Add(ChannelType.Reliable, Factory.Get<IReliableChannel>());
+			this.Channels.Add(ChannelType.ReliableOrdered, Factory.Get<IReliableOrderedChannel>());
 
 			foreach (var chan in this.Channels.Values)
 			{
 				chan.Initialize(this);
 			}
 
-			this.mergeData = this.packetPool.Get(PacketType.Merged, Const.Mtu.MaxPacketSize);
-
-			//if ID != 0 then we already connected
 			this.connectAttempts = 0;
 			if (connectId == 0)
 			{
 				this.connectId = DateTime.UtcNow.Ticks;
-				SendConnectRequest();
+				this.SendConnectRequest();
 			}
 			else
 			{
 				this.connectId = connectId;
 				this.connectionState = ConnectionState.Connected;
-				SendConnectAccept();
+				this.SendConnectAccept();
 			}
 
 			Factory.Get<IUdpLogger>().Log($"Connection Id is {this.connectId}.");
@@ -128,33 +104,24 @@ namespace ReliableUdp
 
 		private void SendConnectRequest()
 		{
-			//Get connect key bytes
 			byte[] keyData = Encoding.UTF8.GetBytes(this.peerListener.ConnectKey);
 
-			//Make initial packet
 			var connectPacket = this.packetPool.Get(PacketType.ConnectRequest, 12 + keyData.Length);
 
-			//Add data
 			BitHelper.GetBytes(connectPacket.RawData, 1, PROTOCOL_ID);
 			BitHelper.GetBytes(connectPacket.RawData, 5, this.connectId);
 			Buffer.BlockCopy(keyData, 0, connectPacket.RawData, 13, keyData.Length);
 
-			//Send raw
-			this.peerListener.SendRawAndRecycle(connectPacket, this.remoteEndPoint);
+			this.peerListener.SendRawAndRecycle(connectPacket, this.EndPoint);
 		}
 
 		private void SendConnectAccept()
 		{
 			this.NetworkStatisticManagement.PacketReceived();
 
-			//Make initial packet
 			var connectPacket = this.packetPool.Get(PacketType.ConnectAccept, 8);
-
-			//Add data
 			BitHelper.GetBytes(connectPacket.RawData, 1, this.connectId);
-
-			//Send raw
-			this.peerListener.SendRawAndRecycle(connectPacket, this.remoteEndPoint);
+			this.peerListener.SendRawAndRecycle(connectPacket, this.EndPoint);
 		}
 
 		public bool ProcessConnectAccept(UdpPacket packet)
@@ -162,8 +129,8 @@ namespace ReliableUdp
 			if (this.connectionState != ConnectionState.InProgress)
 				return false;
 
-			//check connection id
-			if (System.BitConverter.ToInt64(packet.RawData, 1) != this.connectId)
+			// check connection id
+			if (BitConverter.ToInt64(packet.RawData, 1) != this.connectId)
 			{
 				return false;
 			}
@@ -174,7 +141,7 @@ namespace ReliableUdp
 			return true;
 		}
 
-		private static PacketType SendOptionsToProperty(Enums.ChannelType options)
+		private static PacketType SendOptionsToProperty(ChannelType options)
 		{
 			switch (options)
 			{
@@ -189,44 +156,42 @@ namespace ReliableUdp
 			}
 		}
 
-		public int GetMaxSinglePacketSize(Enums.ChannelType options)
+		public int GetMaxSinglePacketSize(ChannelType options)
 		{
-			return this.mtu - UdpPacket.GetHeaderSize(SendOptionsToProperty(options));
+			return this.PacketMtuHandler.Mtu - UdpPacket.GetHeaderSize(SendOptionsToProperty(options));
 		}
 
-		public void Send(byte[] data, Enums.ChannelType channelType)
+		public void Send(byte[] data, ChannelType channelType)
 		{
-			Send(data, 0, data.Length, channelType);
+			this.Send(data, 0, data.Length, channelType);
 		}
 
-		public void Send(UdpDataWriter dataWriter, Enums.ChannelType channelType)
+		public void Send(UdpDataWriter dataWriter, ChannelType channelType)
 		{
-			Send(dataWriter.Data, 0, dataWriter.Length, channelType);
+			this.Send(dataWriter.Data, 0, dataWriter.Length, channelType);
 		}
 
-		public void Send(IProtocolPacket packet, Enums.ChannelType channelType)
+		public void Send(IProtocolPacket packet, ChannelType channelType)
 		{
 			var dataWriter = new UdpDataWriter();
 			dataWriter.Reset();
 			packet.Serialize(dataWriter);
-			Send(dataWriter, channelType);
+			this.Send(dataWriter, channelType);
 		}
 
-		public void Send(byte[] data, int start, int length, Enums.ChannelType options)
+		public void Send(byte[] data, int start, int length, ChannelType options)
 		{
-			//Prepare
 			PacketType type = SendOptionsToProperty(options);
 			int headerSize = UdpPacket.GetHeaderSize(type);
 
-			//Check fragmentation
-			if (length + headerSize > this.mtu)
+			if (length + headerSize > this.PacketMtuHandler.Mtu)
 			{
-				if (options == Enums.ChannelType.UnreliableOrdered || options == Enums.ChannelType.Unreliable)
+				if (options == ChannelType.UnreliableOrdered || options == ChannelType.Unreliable)
 				{
-					throw new Exception("Unreliable packet size > allowed (" + (this.mtu - headerSize) + ")");
+					throw new Exception("Unreliable packet size > allowed (" + (this.PacketMtuHandler.Mtu - headerSize) + ")");
 				}
 
-				int packetFullSize = this.mtu - headerSize;
+				int packetFullSize = this.PacketMtuHandler.Mtu - headerSize;
 				int packetDataSize = packetFullSize - HeaderSize.FRAGMENT;
 
 				int fullPacketsCount = length / packetDataSize;
@@ -241,7 +206,7 @@ namespace ReliableUdp
 							  " fullPacketsCount: {4}\n" +
 							  " lastPacketSize: {5}\n" +
 							  " totalPackets: {6}",
-					 this.mtu, headerSize, packetFullSize, packetDataSize, fullPacketsCount, lastPacketSize, totalPackets));
+					 this.PacketMtuHandler.Mtu, headerSize, packetFullSize, packetDataSize, fullPacketsCount, lastPacketSize, totalPackets));
 
 				if (totalPackets > ushort.MaxValue)
 				{
@@ -257,38 +222,36 @@ namespace ReliableUdp
 					p.FragmentsTotal = (ushort)totalPackets;
 					p.IsFragmented = true;
 					Buffer.BlockCopy(data, i * packetDataSize, p.RawData, dataOffset, packetDataSize);
-					SendPacket(p);
+					this.SendPacket(p);
 				}
 
 				if (lastPacketSize > 0)
 				{
 					UdpPacket p = this.packetPool.Get(type, lastPacketSize + HeaderSize.FRAGMENT);
 					p.FragmentId = this.fragmentId;
-					p.FragmentPart = (ushort)fullPacketsCount; //last
+					p.FragmentPart = (ushort)fullPacketsCount; // last
 					p.FragmentsTotal = (ushort)totalPackets;
 					p.IsFragmented = true;
 					Buffer.BlockCopy(data, fullPacketsCount * packetDataSize, p.RawData, dataOffset, lastPacketSize);
-					SendPacket(p);
+					this.SendPacket(p);
 				}
 
 				this.fragmentId++;
 				return;
 			}
 
-			//Else just send
 			UdpPacket packet = this.packetPool.GetWithData(type, data, start, length);
-			SendPacket(packet);
+			this.SendPacket(packet);
 		}
 
 		public void CreateAndSend(PacketType type, SequenceNumber sequence)
 		{
 			UdpPacket packet = this.packetPool.Get(type, 0);
 			packet.Sequence = sequence;
-			SendPacket(packet);
+			this.SendPacket(packet);
 		}
 
-		//from user thread, our thread, or recv?
-		private void SendPacket(UdpPacket packet)
+		public void SendPacket(UdpPacket packet)
 		{
 			Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
 			switch (packet.Type)
@@ -306,11 +269,7 @@ namespace ReliableUdp
 					this.Channels[ChannelType.ReliableOrdered].AddToQueue(packet);
 					break;
 				case PacketType.MtuCheck:
-					//Must check result for MTU fix
-					if (!this.peerListener.SendRawAndRecycle(packet, this.remoteEndPoint))
-					{
-						this.finishMtu = true;
-					}
+					this.PacketMtuHandler.SendPacket(this, packet);
 					break;
 				case PacketType.AckReliable:
 				case PacketType.AckReliableOrdered:
@@ -318,7 +277,7 @@ namespace ReliableUdp
 				case PacketType.Pong:
 				case PacketType.Disconnect:
 				case PacketType.MtuOk:
-					SendRawData(packet);
+					this.SendRawData(packet);
 					this.packetPool.Recycle(packet);
 					break;
 				default:
@@ -332,7 +291,7 @@ namespace ReliableUdp
 			{
 				Factory.Get<IUdpLogger>().Log($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
 
-				//Get needed array from dictionary
+				// Get needed array from dictionary
 				ushort packetFragId = p.FragmentId;
 				IncomingFragments incomingFragments;
 				if (!this.holdedFragmentsForAck.TryGetValue(packetFragId, out incomingFragments))
@@ -344,27 +303,27 @@ namespace ReliableUdp
 					this.holdedFragmentsForAck.Add(packetFragId, incomingFragments);
 				}
 
-				//Cache
+				// Cache
 				var fragments = incomingFragments.Fragments;
 
-				//Error check
+				// Error check
 				if (p.FragmentPart >= fragments.Length || fragments[p.FragmentPart] != null)
 				{
 					Factory.Get<IUdpLogger>().Log($"Invalid fragment packet.");
 					return;
 				}
 
-				//Fill array
+				// Fill array
 				fragments[p.FragmentPart] = p;
 
-				//Increase received fragments count
+				// Increase received fragments count
 				incomingFragments.ReceivedCount++;
 
-				//Increase total size
+				// Increase total size
 				int dataOffset = p.GetHeaderSize() + HeaderSize.FRAGMENT;
 				incomingFragments.TotalSize += p.Size - dataOffset;
 
-				//Check for finish
+				// Check for finish
 				if (incomingFragments.ReceivedCount != fragments.Length)
 				{
 					return;
@@ -377,7 +336,7 @@ namespace ReliableUdp
 				int firstFragmentSize = fragments[0].Size - dataOffset;
 				for (int i = 0; i < incomingFragments.ReceivedCount; i++)
 				{
-					//Create resulting big packet
+					// Create resulting big packet
 					int fragmentSize = fragments[i].Size - dataOffset;
 					Buffer.BlockCopy(
 						 fragments[i].RawData,
@@ -390,16 +349,17 @@ namespace ReliableUdp
 					fragments[i] = null;
 				}
 
-				//Send to process
-				this.peerListener.ReceiveAckFromPeer(resultingPacket, this.remoteEndPoint, channel);
+				// Send to process
+				this.peerListener.ReceiveAckFromPeer(resultingPacket, this.EndPoint, channel);
 
-				//Clear memory
+				// Clear memory
 				this.packetPool.Recycle(resultingPacket);
 				this.holdedFragmentsForAck.Remove(packetFragId);
 			}
-			else //Just simple packet
+			else
 			{
-				this.peerListener.ReceiveAckFromPeer(p, this.remoteEndPoint, channel);
+				// Just simple packet
+				this.peerListener.ReceiveAckFromPeer(p, this.EndPoint, channel);
 				this.packetPool.Recycle(p);
 			}
 		}
@@ -410,39 +370,37 @@ namespace ReliableUdp
 			{
 				Factory.Get<IUdpLogger>().Log($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
 
-				//Get needed array from dictionary
+				// Get needed array from dictionary
 				ushort packetFragId = p.FragmentId;
 				IncomingFragments incomingFragments;
 				if (!this.holdedFragments.TryGetValue(packetFragId, out incomingFragments))
 				{
-					incomingFragments = new IncomingFragments
-					{
-						Fragments = new UdpPacket[p.FragmentsTotal]
-					};
+					incomingFragments = new IncomingFragments { Fragments = new UdpPacket[p.FragmentsTotal] };
 					this.holdedFragments.Add(packetFragId, incomingFragments);
 				}
 
-				//Cache
+				// Cache
 				var fragments = incomingFragments.Fragments;
 
-				//Error check
+				// Error check
 				if (p.FragmentPart >= fragments.Length || fragments[p.FragmentPart] != null)
 				{
 					this.packetPool.Recycle(p);
 					Factory.Get<IUdpLogger>().Log($"Invalid fragment packet.");
 					return;
 				}
-				//Fill array
+
+				// Fill array
 				fragments[p.FragmentPart] = p;
 
-				//Increase received fragments count
+				// Increase received fragments count
 				incomingFragments.ReceivedCount++;
 
-				//Increase total size
+				// Increase total size
 				int dataOffset = p.GetHeaderSize() + HeaderSize.FRAGMENT;
 				incomingFragments.TotalSize += p.Size - dataOffset;
 
-				//Check for finish
+				// Check for finish
 				if (incomingFragments.ReceivedCount != fragments.Length)
 				{
 					return;
@@ -455,72 +413,31 @@ namespace ReliableUdp
 				int firstFragmentSize = fragments[0].Size - dataOffset;
 				for (int i = 0; i < incomingFragments.ReceivedCount; i++)
 				{
-					//Create resulting big packet
+					// Create resulting big packet
 					int fragmentSize = fragments[i].Size - dataOffset;
-					Buffer.BlockCopy(
-						 fragments[i].RawData,
-						 dataOffset,
-						 resultingPacket.RawData,
-						 resultingPacketOffset + firstFragmentSize * i,
-						 fragmentSize);
+					Buffer.BlockCopy(fragments[i].RawData, dataOffset, resultingPacket.RawData, resultingPacketOffset + firstFragmentSize * i, fragmentSize);
 
-					//Free memory
+					// Free memory
 					this.packetPool.Recycle(fragments[i]);
 					fragments[i] = null;
 				}
 
-				//Send to process
-				this.peerListener.ReceiveFromPeer(resultingPacket, this.remoteEndPoint, channel);
+				// Send to process
+				this.peerListener.ReceiveFromPeer(resultingPacket, this.EndPoint, channel);
 
-				//Clear memory
+				// Clear memory
 				this.packetPool.Recycle(resultingPacket);
 				this.holdedFragments.Remove(packetFragId);
 			}
-			else //Just simple packet
+			else
 			{
-				this.peerListener.ReceiveFromPeer(p, this.remoteEndPoint, channel);
+				// Just simple packet
+				this.peerListener.ReceiveFromPeer(p, this.EndPoint, channel);
 				this.packetPool.Recycle(p);
 			}
 		}
 
-		private void ProcessMtuPacket(UdpPacket packet)
-		{
-			if (packet.Size == 1 ||
-				 packet.RawData[1] >= Const.Mtu.PossibleValues.Length)
-				return;
-
-			//MTU auto increase
-			if (packet.Type == PacketType.MtuCheck)
-			{
-				if (packet.Size != Const.Mtu.PossibleValues[packet.RawData[1]])
-				{
-					return;
-				}
-				this.mtuCheckAttempts = 0;
-
-				Factory.Get<IUdpLogger>().Log($"MTU check. Resend {packet.RawData[1]}");
-				var mtuOkPacket = this.packetPool.Get(PacketType.MtuOk, 1);
-				mtuOkPacket.RawData[1] = packet.RawData[1];
-				SendPacket(mtuOkPacket);
-			}
-			else if (packet.RawData[1] > this.mtuIdx) //MtuOk
-			{
-				lock (this.mtuMutex)
-				{
-					this.mtuIdx = packet.RawData[1];
-					this.mtu = Const.Mtu.PossibleValues[this.mtuIdx];
-				}
-				//if maxed - finish.
-				if (this.mtuIdx == Const.Mtu.PossibleValues.Length - 1)
-				{
-					this.finishMtu = true;
-				}
-
-				Factory.Get<IUdpLogger>().Log($"MTU is set to {this.mtu}");
-			}
-		}
-
-		//Process incoming packet
+		// Process incoming packet
 		public void ProcessPacket(UdpPacket packet)
 		{
 			this.NetworkStatisticManagement.PacketReceived();
@@ -529,45 +446,31 @@ namespace ReliableUdp
 			switch (packet.Type)
 			{
 				case PacketType.ConnectRequest:
-					//response with connect
-					long newId = System.BitConverter.ToInt64(packet.RawData, 1);
+					// response with connect
+					long newId = BitConverter.ToInt64(packet.RawData, 1);
 					if (newId > this.connectId)
 					{
 						this.connectId = newId;
 					}
 
-					Factory.Get<IUdpLogger>().Log($"Connect Request Last Id {ConnectId} NewId {newId} EP {this.remoteEndPoint}");
-					SendConnectAccept();
+					Factory.Get<IUdpLogger>().Log($"Connect Request Last Id {this.ConnectId} NewId {newId} EP {this.EndPoint}");
+					this.SendConnectAccept();
 					this.packetPool.Recycle(packet);
 					break;
 
 				case PacketType.Merged:
-					int pos = HeaderSize.DEFAULT;
-					while (pos < packet.Size)
-					{
-						ushort size = System.BitConverter.ToUInt16(packet.RawData, pos);
-						pos += 2;
-						UdpPacket mergedPacket = this.packetPool.GetAndRead(packet.RawData, pos, size);
-						if (mergedPacket == null)
-						{
-							this.packetPool.Recycle(packet);
-							break;
-						}
-						pos += size;
-						ProcessPacket(mergedPacket);
-					}
+					this.PacketMergeHandler.ProcessPacket(this, packet);
 					break;
-				//If we get ping, send pong
+
 				case PacketType.Ping:
-					this.NetworkStatisticManagement.HandlePing(this, packet);
+					this.PacketPingPongHandler.HandlePing(this, packet);
 					break;
 
-				//If we get pong, calculate ping time and rtt
 				case PacketType.Pong:
-					this.NetworkStatisticManagement.HandlePong(this, packet);
+					this.PacketPingPongHandler.HandlePong(this, packet);
 					break;
 
-				//Process ack
+				// Process ack
 				case PacketType.AckReliable:
 					this.Channels[ChannelType.Reliable].ProcessAck(packet);
 					this.packetPool.Recycle(packet);
@@ -592,7 +495,7 @@ namespace ReliableUdp
 
 				case PacketType.MtuCheck:
 				case PacketType.MtuOk:
-					ProcessMtuPacket(packet);
+					this.PacketMtuHandler.ProcessMtuPacket(this, packet);
 					break;
 
 				default:
@@ -601,39 +504,20 @@ namespace ReliableUdp
 			}
 		}
 
-		private static bool CanMerge(PacketType type)
-		{
-			switch (type)
-			{
-				case PacketType.ConnectAccept:
-				case PacketType.ConnectRequest:
-				case PacketType.MtuOk:
-				case PacketType.Pong:
-				case PacketType.Disconnect:
-					return false;
-				default:
-					return true;
-			}
-		}
-
 		public void SendRawData(UdpPacket packet)
 		{
-			//2 - merge byte + minimal packet size + datalen(ushort)
-			if (this.peerListener.MergeEnabled &&
-				 CanMerge(packet.Type) &&
-				 this.mergePos + packet.Size + HeaderSize.DEFAULT * 2 + 2 < this.mtu)
+			if (this.PacketMergeHandler.SendRawData(this, packet))
 			{
-				BitHelper.GetBytes(this.mergeData.RawData, this.mergePos + HeaderSize.DEFAULT, (ushort)packet.Size);
-				Buffer.BlockCopy(packet.RawData, 0, this.mergeData.RawData, this.mergePos + HeaderSize.DEFAULT + 2, packet.Size);
-				this.mergePos += packet.Size + 2;
-				this.mergeCount++;
-
-				//DebugWriteForce("Merged: " + _mergePos + "/" + (_mtu - 2) + ", count: " + _mergeCount);
 				return;
 			}
 
 			Factory.Get<IUdpLogger>().Log($"Sending Packet {packet.Type}");
-			this.peerListener.SendRaw(packet.RawData, 0, packet.Size, this.remoteEndPoint);
+			this.peerListener.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint);
+		}
+
+		public bool SendRaw(byte[] message, int start, int length, UdpEndPoint endPoint)
+		{
+			return this.peerListener.SendRaw(message, start, length, endPoint);
 		}
 
 		private void SendQueuedPackets(int currentMaxSend)
@@ -641,7 +525,7 @@ namespace ReliableUdp
 			int currentSended = 0;
 			while (currentSended < currentMaxSend)
 			{
-				//Get one of packets
+				// Get one of packets
 				if (this.Channels[ChannelType.ReliableOrdered].SendNextPacket() ||
 					 this.Channels[ChannelType.Reliable].SendNextPacket() ||
 					 this.Channels[ChannelType.UnreliableOrdered].SendNextPacket() ||
@@ -651,36 +535,21 @@ namespace ReliableUdp
 				}
 				else
 				{
-					//no outgoing packets
+					// no outgoing packets
 					break;
 				}
 			}
 
-			this.NetworkStatisticManagement.IncreaseSendedPacketCount(currentSended);
+			this.NetworkStatisticManagement.FlowManagement.IncreaseSendedPacketCount(currentSended);
 
-			//If merging enabled
-			if (this.mergePos > 0)
-			{
-				if (this.mergeCount > 1)
-				{
-					Factory.Get<IUdpLogger>().Log($"Send merged {this.mergePos}, count {this.mergeCount}");
-					this.peerListener.SendRaw(this.mergeData.RawData, 0, HeaderSize.DEFAULT + this.mergePos, this.remoteEndPoint);
-				}
-				else
-				{
-					//Send without length information and merging
-					this.peerListener.SendRaw(this.mergeData.RawData, HeaderSize.DEFAULT + 2, this.mergePos - 2, this.remoteEndPoint);
-				}
-				this.mergePos = 0;
-				this.mergeCount = 0;
-			}
+			this.PacketMergeHandler.SendQueuedPackets(this);
 		}
 
 		public void Flush()
 		{
 			lock (this.flushLock)
 			{
-				SendQueuedPackets(int.MaxValue);
+				this.SendQueuedPackets(int.MaxValue);
 			}
 		}
 
@@ -704,60 +573,33 @@ namespace ReliableUdp
 						return;
 					}
 
-					//else send connect again
-					SendConnectRequest();
+					// else send connect again
+					this.SendConnectRequest();
 				}
+
 				return;
 			}
 
-			int currentMaxSend = this.NetworkStatisticManagement.GetCurrentMaxSend(deltaTime);
+			int currentMaxSend = this.NetworkStatisticManagement.FlowManagement.GetCurrentMaxSend(deltaTime);
 
-			//Pending acks
 			foreach (var chan in this.Channels.Values)
 			{
 				chan.SendAcks();
 			}
 
 			this.NetworkStatisticManagement.Update(this, deltaTime, this.peerListener.ConnectionLatencyUpdated);
+			this.PacketPingPongHandler.Update(this, deltaTime);
 
-			//MTU - Maximum transmission unit
-			if (!this.finishMtu)
-			{
-				this.mtuCheckTimer += deltaTime;
-				if (this.mtuCheckTimer >= MTU_CHECK_DELAY)
-				{
-					this.mtuCheckTimer = 0;
-					this.mtuCheckAttempts++;
-					if (this.mtuCheckAttempts >= MAX_MTU_CHECK_ATTEMPTS)
-					{
-						this.finishMtu = true;
-					}
-					else
-					{
-						lock (this.mtuMutex)
-						{
-							//Send increased packet
-							if (this.mtuIdx < Const.Mtu.PossibleValues.Length - 1)
-							{
-								int newMtu = Const.Mtu.PossibleValues[this.mtuIdx + 1] - HeaderSize.DEFAULT;
-								var p = this.packetPool.Get(PacketType.MtuCheck, newMtu);
-								p.RawData[1] = (byte)(this.mtuIdx + 1);
-								SendPacket(p);
-							}
-						}
-					}
-				}
-			}
-			//MTU - end
+			this.PacketMtuHandler.Update(this, deltaTime);
 
-			//Pending send
+			// Pending send
 			lock (this.flushLock)
 			{
-				SendQueuedPackets(currentMaxSend);
+				this.SendQueuedPackets(currentMaxSend);
 			}
 		}
 
-		//For channels
+		// For channels
 		public void Recycle(UdpPacket packet)
 		{
 			this.packetPool.Recycle(packet);
@@ -766,6 +608,16 @@ namespace ReliableUdp
 		public UdpPacket GetPacketFromPool(PacketType type, int bytesCount)
 		{
 			return this.packetPool.Get(type, bytesCount);
+		}
+
+		public bool SendRawAndRecycle(UdpPacket packet, UdpEndPoint peerEndPoint)
+		{
+			return this.peerListener.SendRawAndRecycle(packet, peerEndPoint);
+		}
+
+		public UdpPacket GetAndRead(byte[] packetRawData, int pos, ushort size)
+		{
+			return this.packetPool.GetAndRead(packetRawData, pos, size);
 		}
 	}
 }

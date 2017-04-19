@@ -38,7 +38,6 @@ namespace ReliableUdp
 
 		public int UpdateTime { get { return this.logicThread.SleepTime; } set { this.logicThread.SleepTime = value; } }
 		public long DisconnectTimeout = 5000;
-		public bool MergeEnabled = true;
 		public int ReconnectDelay = 500;
 		public int MaxConnectAttempts = 10;
 		public bool ReuseAddress = false;
@@ -170,7 +169,7 @@ namespace ReliableUdp
 		{
 			if (sendDisconnectPacket)
 			{
-				if (count + 8 >= peer.Mtu)
+				if (count + 8 >= peer.PacketMtuHandler.Mtu)
 				{
 					//Drop additional data
 					data = null;
