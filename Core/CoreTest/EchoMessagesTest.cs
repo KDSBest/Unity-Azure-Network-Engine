@@ -13,6 +13,8 @@ namespace CoreTest
 	public class EchoMessagesTest
 	{
 		private static int messagesReceivedCount = 0;
+		private static int clientMessagesReceivedCount = 0;
+		private static int serverMessagesReceivedCount = 0;
 
 		private class ClientListener : IUdpEventListener
 		{
@@ -61,23 +63,25 @@ namespace CoreTest
 			{
 				int type = reader.GetInt();
 				int num = reader.GetInt();
+				Assert.IsTrue(num < 5 && num >= 0);
+
 				messagesReceivedCount++;
+				clientMessagesReceivedCount++;
 				Console.WriteLine("[{0}] CNT: {1}, TYPE: {2}, NUM: {3}", peer.UdpManager.LocalEndPoint.Port, messagesReceivedCount, type, num);
 			}
 
 			public void OnNetworkReceiveAck(UdpPeer peer, UdpDataReader reader, ChannelType channel)
 			{
-				//echo
-				peer.Send(reader.Data, ChannelType.Reliable);
-
 				int type = reader.GetInt();
 				int num = reader.GetInt();
-				if (num > 5)
-					Console.WriteLine("WOOT");
+				Assert.IsTrue(num < 5 && num >= 0);
+
+				messagesReceivedCount++;
+				clientMessagesReceivedCount++;
 				Console.WriteLine("[{0}] Ack CNT: {1}, TYPE: {2}, NUM: {3}", peer.UdpManager.LocalEndPoint.Port, messagesReceivedCount, type, num);
 			}
 
-			public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader, UnconnectedMessageType messageType)
+			public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader)
 			{
 
 			}
@@ -114,19 +118,23 @@ namespace CoreTest
 
 			public void OnNetworkReceive(UdpPeer peer, UdpDataReader reader, ChannelType channel)
 			{
-				//echo
-				peer.Send(reader.Data, ChannelType.Reliable);
+				messagesReceivedCount++;
+				serverMessagesReceivedCount++;
+				peer.Send(reader.Data, channel);
 			}
 
 			public void OnNetworkReceiveAck(UdpPeer peer, UdpDataReader reader, ChannelType channel)
 			{
 				int type = reader.GetInt();
 				int num = reader.GetInt();
+				Assert.IsTrue(num < 5 && num >= 0);
+
 				messagesReceivedCount++;
+				serverMessagesReceivedCount++;
 				Console.WriteLine("[{0}] Ack CNT: {1}, TYPE: {2}, NUM: {3}", peer.UdpManager.LocalEndPoint.Port, messagesReceivedCount, type, num);
 			}
 
-			public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader, UnconnectedMessageType messageType)
+			public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader)
 			{
 				Console.WriteLine("[Server] ReceiveUnconnected: {0}", reader.GetString(100));
 			}
@@ -143,13 +151,15 @@ namespace CoreTest
 		[TestMethod]
 		public void TestEcho()
 		{
+			messagesReceivedCount = 0;
+			clientMessagesReceivedCount = 0;
+			serverMessagesReceivedCount = 0;
 			FactoryRegistrations.Register();
 
 			//Server
 			this.serverListener = new ServerListener();
 
-			UdpManager server = new UdpManager(this.serverListener, 2, "myapp1");
-			//server.ReuseAddress = true;
+			UdpManager server = new UdpManager(this.serverListener, "myapp1", 2);
 			if (!server.Start(9050))
 			{
 				Console.WriteLine("Server start failed");
@@ -160,9 +170,6 @@ namespace CoreTest
 			this.clientListener = new ClientListener();
 
 			UdpManager client1 = new UdpManager(this.clientListener, "myapp1");
-			//client1.SimulateLatency = true;
-			client1.SimulationMaxLatency = 1500;
-			client1.MergeEnabled = true;
 			if (!client1.Start())
 			{
 				Console.WriteLine("Client1 start failed");
@@ -171,12 +178,10 @@ namespace CoreTest
 			client1.Connect("127.0.0.1", 9050);
 
 			UdpManager client2 = new UdpManager(this.clientListener, "myapp1");
-			//client2.SimulateLatency = true;
-			client2.SimulationMaxLatency = 1500;
 			client2.Start();
 			client2.Connect("::1", 9050);
 
-			for (int i = 0; i < 1000; i++)
+			for (int i = 0; i < 1000 && messagesReceivedCount != 120; i++)
 			{
 				client1.PollEvents();
 				client2.PollEvents();
@@ -203,6 +208,9 @@ namespace CoreTest
 				 client2.PacketsReceived,
 				 client2.BytesSent,
 				 client2.PacketsSent);
+
+			Assert.AreEqual(120, messagesReceivedCount);
+			Assert.AreEqual(serverMessagesReceivedCount, clientMessagesReceivedCount);
 		}
 	}
 }

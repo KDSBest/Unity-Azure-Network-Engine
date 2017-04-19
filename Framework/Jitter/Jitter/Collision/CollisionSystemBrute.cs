@@ -153,7 +153,6 @@ namespace Jitter.Collision
             JVector tempNormal; float tempFraction;
             bool result = false;
 
-            // TODO: This can be done better in CollisionSystemPersistenSAP
             foreach (IBroadphaseEntity e in bodyList)
             {
                 if (e is SoftBody)

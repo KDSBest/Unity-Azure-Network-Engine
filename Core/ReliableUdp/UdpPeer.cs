@@ -17,7 +17,7 @@ namespace ReliableUdp
 	using ReliableUdp.Packet;
 	using ReliableUdp.Utility;
 
-	public sealed class UdpPeer
+	public class UdpPeer
 	{
 		//Flow control
 		private int currentFlowMode;

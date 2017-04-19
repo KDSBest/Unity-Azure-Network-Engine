@@ -188,7 +188,7 @@ namespace ReliableUdp
 			catch (SocketException ex)
 			{
 				Factory.Get<IUdpLogger>().Log($"Bind error {ex}");
-				//TODO: very temporary hack for iOS (Unity3D)
+
 				if (ex.SocketErrorCode == SocketError.AddressFamilyNotSupported)
 				{
 					return true;

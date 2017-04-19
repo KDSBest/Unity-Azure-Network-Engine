@@ -5,23 +5,29 @@ namespace ReliableUdp
 
 	public class UdpPeerCollection
 	{
+		public int MaxPeers { get; set; }
+
 		private readonly Dictionary<UdpEndPoint, UdpPeer> peersDict;
-		private readonly UdpPeer[] peersArray;
-		private int count;
+		private readonly List<UdpPeer> peers;
 
 		public int Count
 		{
-			get { return this.count; }
+			get { return this.peers.Count; }
 		}
 
 		public UdpPeer this[int index]
 		{
-			get { return this.peersArray[index]; }
+			get { return this.peers[index]; }
 		}
 
 		public UdpPeerCollection(int maxPeers)
 		{
-			this.peersArray = new UdpPeer[maxPeers];
+			this.MaxPeers = maxPeers;
+			if (maxPeers < 100)
+				this.peers = new List<UdpPeer>(maxPeers);
+			else
+				this.peers = new List<UdpPeer>();
+
 			this.peersDict = new Dictionary<UdpEndPoint, UdpPeer>();
 		}
 
@@ -32,16 +38,14 @@ namespace ReliableUdp
 
 		public void Clear()
 		{
-			Array.Clear(this.peersArray, 0, this.count);
+			this.peers.Clear();
 			this.peersDict.Clear();
-			this.count = 0;
 		}
 
 		public void Add(UdpEndPoint endPoint, UdpPeer peer)
 		{
-			this.peersArray[this.count] = peer;
+			this.peers.Add(peer);
 			this.peersDict.Add(endPoint, peer);
-			this.count++;
 		}
 
 		public bool ContainsAddress(UdpEndPoint endPoint)
@@ -51,24 +55,20 @@ namespace ReliableUdp
 
 		public UdpPeer[] ToArray()
 		{
-			UdpPeer[] result = new UdpPeer[this.count];
-			Array.Copy(this.peersArray, 0, result, 0, this.count);
-			return result;
+			return this.peers.ToArray();
 		}
 
 		public void RemoveAt(int idx)
 		{
-			this.peersDict.Remove(this.peersArray[idx].EndPoint);
-			this.peersArray[idx] = this.peersArray[this.count - 1];
-			this.peersArray[this.count - 1] = null;
-			this.count--;
+			this.peersDict.Remove(this.peers[idx].EndPoint);
+			this.peers.RemoveAt(idx);
 		}
 
 		public void Remove(UdpEndPoint endPoint)
 		{
-			for (int i = 0; i < this.count; i++)
+			for (int i = 0; i < this.peers.Count; i++)
 			{
-				if (this.peersArray[i].EndPoint.Equals(endPoint))
+				if (this.peers[i].EndPoint.Equals(endPoint))
 				{
 					this.RemoveAt(i);
 					break;

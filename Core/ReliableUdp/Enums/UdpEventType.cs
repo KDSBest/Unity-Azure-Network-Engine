@@ -8,8 +8,6 @@ namespace ReliableUdp.Enums
 		ReceiveUnconnected,
 		Error,
 		ConnectionLatencyUpdated,
-		DiscoveryRequest,
-		DiscoveryResponse,
 		ReceiveAck
 	}
 }

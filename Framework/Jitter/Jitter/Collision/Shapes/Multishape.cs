@@ -136,7 +136,6 @@ namespace Jitter.Collision.Shapes
         {
             geomCen = JVector.Zero;
 
-            // TODO: calc this right
             inertia = JMatrix.Identity;
 
             JVector size; JVector.Subtract(ref boundingBox.Max, ref boundingBox.Min, out size);

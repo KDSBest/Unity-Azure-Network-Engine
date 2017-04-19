@@ -6,7 +6,9 @@ namespace ReliableUdp.Logging
 	{
 		public void Log(string str)
 		{
+#if DEBUG
 			Debug.WriteLine(str);
+#endif
 		}
 	}
 }

@@ -49,7 +49,7 @@
 		/// <param name="remoteEndPoint">From address (IP and Port)</param>
 		/// <param name="reader">Message data</param>
 		/// <param name="messageType">Message type (simple, discovery request or responce)</param>
-		void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader, UnconnectedMessageType messageType);
+		void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader);
 
 		/// <summary>
 		/// Latency information updated

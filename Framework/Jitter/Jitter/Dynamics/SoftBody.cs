@@ -511,8 +511,6 @@ namespace Jitter.Dynamics
 
         public void AddForce(JVector force)
         {
-            // TODO
-            throw new NotImplementedException();
         }
 
         public void Rotate(JMatrix orientation, JVector center)
@@ -525,7 +523,6 @@ namespace Jitter.Dynamics
 
         public JVector CalculateCenter()
         {
-            // TODO
             throw new NotImplementedException();
         }
 

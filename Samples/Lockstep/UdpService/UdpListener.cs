@@ -99,7 +99,7 @@ namespace UdpService
 		{
 		}
 
-		public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader, UnconnectedMessageType messageType)
+		public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader)
 		{
 		}
 

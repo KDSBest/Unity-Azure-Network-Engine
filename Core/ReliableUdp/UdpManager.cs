@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using ReliableUdp.Simulation;
+
 using Factory = Utility.Factory;
 
 namespace ReliableUdp
@@ -20,18 +22,6 @@ namespace ReliableUdp
 	{
 		public delegate void OnMessageReceived(byte[] data, int length, int errorCode, UdpEndPoint remoteEndPoint);
 
-#if DEBUG
-		private struct IncomingData
-		{
-			public byte[] Data;
-			public UdpEndPoint EndPoint;
-			public DateTime TimeWhenGet;
-		}
-		private readonly List<IncomingData> pingSimulationList = new List<IncomingData>();
-		private readonly Random randomGenerator = new Random();
-		private const int MIN_LATENCY_TRESHOLD = 5;
-#endif
-
 		private readonly UdpSocket socket;
 		private readonly List<FlowMode> flowModes;
 
@@ -47,24 +37,16 @@ namespace ReliableUdp
 
 		private readonly UdpPacketPool netPacketPool;
 
-		//config section
-		public bool UnconnectedMessagesEnabled = false;
 		public int UpdateTime { get { return this.logicThread.SleepTime; } set { this.logicThread.SleepTime = value; } }
 		public const int DEFAULT_PING_INTERVAL = 1000;
 		public int PingInterval = DEFAULT_PING_INTERVAL;
 		public long DisconnectTimeout = 5000;
-		public bool SimulatePacketLoss = false;
-		public bool SimulateLatency = false;
-		public int SimulationPacketLossChance = 10;
-		public int SimulationMinLatency = 30;
-		public int SimulationMaxLatency = 100;
-		public bool UnsyncedEvents = false;
-		public bool DiscoveryEnabled = false;
-		public bool MergeEnabled = false;
+		public bool MergeEnabled = true;
 		public int ReconnectDelay = 500;
 		public int MaxConnectAttempts = 10;
 		public bool ReuseAddress = false;
 
+		public INetworkSimulation NetworkSimulation = null;
 		private const int DEFAULT_UPDATE_TIME = 15;
 
 		//stats
@@ -142,25 +124,15 @@ namespace ReliableUdp
 		}
 
 		/// <summary>
-		/// NetManager constructor with maxConnections = 1 (usable for client)
-		/// </summary>
-		/// <param name="listener">Network events listener</param>
-		/// <param name="connectKey">Application key (must be same with remote host for establish connection)</param>
-		public UdpManager(IUdpEventListener listener, string connectKey) : this(listener, 1024, connectKey)
-		{
-
-		}
-
-		/// <summary>
 		/// NetManager constructor
 		/// </summary>
 		/// <param name="listener">Network events listener</param>
 		/// <param name="maxConnections">Maximum connections (incoming and outcoming)</param>
 		/// <param name="connectKey">Application key (must be same with remote host for establish connection)</param>
-		public UdpManager(IUdpEventListener listener, int maxConnections, string connectKey)
+		public UdpManager(IUdpEventListener listener, string connectKey, int maxConnections = int.MaxValue, int updateTime = DEFAULT_UPDATE_TIME)
 		{
-			this.logicThread = new UdpThread("LogicThread", DEFAULT_UPDATE_TIME, UpdateLogic);
-			this.socket = new UdpSocket(ReceiveLogic);
+			this.logicThread = new UdpThread("LogicThread", updateTime, this.Update);
+			this.socket = new UdpSocket(this.HandlePacket);
 			this.netEventListener = listener;
 			this.flowModes = new List<FlowMode>();
 			this.netEventsQueue = new Queue<UdpEvent>();
@@ -299,16 +271,9 @@ namespace ReliableUdp
 
 		private void EnqueueEvent(UdpEvent evt)
 		{
-			if (UnsyncedEvents)
+			lock (this.netEventsQueue)
 			{
-				ProcessEvent(evt);
-			}
-			else
-			{
-				lock (this.netEventsQueue)
-				{
-					this.netEventsQueue.Enqueue(evt);
-				}
+				this.netEventsQueue.Enqueue(evt);
 			}
 		}
 
@@ -332,16 +297,10 @@ namespace ReliableUdp
 					this.netEventListener.OnNetworkReceive(evt.Peer, evt.DataReader, evt.Channel);
 					break;
 				case UdpEventType.ReceiveUnconnected:
-					this.netEventListener.OnNetworkReceiveUnconnected(evt.RemoteEndPoint, evt.DataReader, UnconnectedMessageType.Default);
+					this.netEventListener.OnNetworkReceiveUnconnected(evt.RemoteEndPoint, evt.DataReader);
 					break;
 				case UdpEventType.ReceiveAck:
 					this.netEventListener.OnNetworkReceiveAck(evt.Peer, evt.DataReader, evt.Channel);
-					break;
-				case UdpEventType.DiscoveryRequest:
-					this.netEventListener.OnNetworkReceiveUnconnected(evt.RemoteEndPoint, evt.DataReader, UnconnectedMessageType.DiscoveryRequest);
-					break;
-				case UdpEventType.DiscoveryResponse:
-					this.netEventListener.OnNetworkReceiveUnconnected(evt.RemoteEndPoint, evt.DataReader, UnconnectedMessageType.DiscoveryResponse);
 					break;
 				case UdpEventType.Error:
 					this.netEventListener.OnNetworkError(evt.RemoteEndPoint, evt.AdditionalData);
@@ -363,28 +322,12 @@ namespace ReliableUdp
 			}
 		}
 
-		//Update function
-		private void UpdateLogic()
+		private void Update()
 		{
-#if DEBUG
-			if (SimulateLatency)
+			if (this.NetworkSimulation != null)
 			{
-				var time = DateTime.UtcNow;
-				lock (this.pingSimulationList)
-				{
-					for (int i = 0; i < this.pingSimulationList.Count; i++)
-					{
-						var incomingData = this.pingSimulationList[i];
-						if (incomingData.TimeWhenGet <= time)
-						{
-							DataReceived(incomingData.Data, incomingData.Data.Length, incomingData.EndPoint);
-							this.pingSimulationList.RemoveAt(i);
-							i--;
-						}
-					}
-				}
+				NetworkSimulation.Update(this.DataReceived);
 			}
-#endif
 
 			//Process acks
 			lock (this.peers)
@@ -422,46 +365,22 @@ namespace ReliableUdp
 			}
 		}
 
-		private void ReceiveLogic(byte[] data, int length, int errorCode, UdpEndPoint remoteEndPoint)
+		private void HandlePacket(byte[] data, int length, int errorCode, UdpEndPoint remoteEndPoint)
 		{
 			//Receive some info
 			if (errorCode == 0)
 			{
-#if DEBUG
 				bool receivePacket = true;
 
-				if (SimulatePacketLoss && this.randomGenerator.Next(100 / SimulationPacketLossChance) == 0)
+				if (this.NetworkSimulation != null)
 				{
-					receivePacket = false;
-				}
-				else if (SimulateLatency)
-				{
-					int latency = this.randomGenerator.Next(SimulationMinLatency, SimulationMaxLatency);
-					if (latency > MIN_LATENCY_TRESHOLD)
-					{
-						byte[] holdedData = new byte[length];
-						Buffer.BlockCopy(data, 0, holdedData, 0, length);
-
-						lock (this.pingSimulationList)
-						{
-							this.pingSimulationList.Add(new IncomingData
-							{
-								Data = holdedData,
-								EndPoint = remoteEndPoint,
-								TimeWhenGet = DateTime.UtcNow.AddMilliseconds(latency)
-							});
-						}
-
-						receivePacket = false;
-					}
+					receivePacket = NetworkSimulation.HandlePacket(data, length, remoteEndPoint);
 				}
 
-				if (receivePacket) //DataReceived
-#endif
-					//ProcessEvents
+				if (receivePacket)
 					DataReceived(data, length, remoteEndPoint);
 			}
-			else //Error on receive
+			else
 			{
 				ClearPeers();
 				var netEvent = CreateEvent(UdpEventType.Error);
@@ -484,34 +403,13 @@ namespace ReliableUdp
 			}
 
 			//Check unconnected
-			switch (packet.Type)
+			if (packet.Type == PacketType.UnconnectedMessage)
 			{
-				case PacketType.DiscoveryRequest:
-					if (DiscoveryEnabled)
-					{
-						var netEvent = CreateEvent(UdpEventType.DiscoveryRequest);
-						netEvent.RemoteEndPoint = remoteEndPoint;
-						netEvent.DataReader.SetSource(packet.RawData, HeaderSize.DEFAULT);
-						EnqueueEvent(netEvent);
-					}
-					return;
-				case PacketType.DiscoveryResponse:
-					{
-						var netEvent = CreateEvent(UdpEventType.DiscoveryResponse);
-						netEvent.RemoteEndPoint = remoteEndPoint;
-						netEvent.DataReader.SetSource(packet.RawData, HeaderSize.DEFAULT);
-						EnqueueEvent(netEvent);
-					}
-					return;
-				case PacketType.UnconnectedMessage:
-					if (UnconnectedMessagesEnabled)
-					{
-						var netEvent = CreateEvent(UdpEventType.ReceiveUnconnected);
-						netEvent.RemoteEndPoint = remoteEndPoint;
-						netEvent.DataReader.SetSource(packet.RawData, HeaderSize.DEFAULT);
-						EnqueueEvent(netEvent);
-					}
-					return;
+				UdpEvent netEvent = CreateEvent(UdpEventType.ReceiveUnconnected);
+				netEvent.RemoteEndPoint = remoteEndPoint;
+				netEvent.DataReader.SetSource(packet.RawData, HeaderSize.DEFAULT);
+				EnqueueEvent(netEvent);
+				return;
 			}
 
 			//Check normal packets
@@ -794,53 +692,11 @@ namespace ReliableUdp
 			return result;
 		}
 
-		public bool SendDiscoveryRequest(UdpDataWriter writer, int port)
-		{
-			return SendDiscoveryRequest(writer.Data, 0, writer.Length, port);
-		}
-
-		public bool SendDiscoveryRequest(byte[] data, int port)
-		{
-			return SendDiscoveryRequest(data, 0, data.Length, port);
-		}
-
-		public bool SendDiscoveryRequest(byte[] data, int start, int length, int port)
-		{
-			if (!IsRunning)
-				return false;
-			var packet = this.netPacketPool.GetWithData(PacketType.DiscoveryRequest, data, start, length);
-			bool result = this.socket.SendBroadcast(packet.RawData, 0, packet.Size, port);
-			this.netPacketPool.Recycle(packet);
-			return result;
-		}
-
-		public bool SendDiscoveryResponse(UdpDataWriter writer, UdpEndPoint remoteEndPoint)
-		{
-			return SendDiscoveryResponse(writer.Data, 0, writer.Length, remoteEndPoint);
-		}
-
-		public bool SendDiscoveryResponse(byte[] data, UdpEndPoint remoteEndPoint)
-		{
-			return SendDiscoveryResponse(data, 0, data.Length, remoteEndPoint);
-		}
-
-		public bool SendDiscoveryResponse(byte[] data, int start, int length, UdpEndPoint remoteEndPoint)
-		{
-			if (!IsRunning)
-				return false;
-			var packet = this.netPacketPool.GetWithData(PacketType.DiscoveryResponse, data, start, length);
-			bool result = SendRawAndRecycle(packet, remoteEndPoint);
-			return result;
-		}
-
 		/// <summary>
 		/// Receive all pending events. Call this in game update code
 		/// </summary>
 		public void PollEvents()
 		{
-			if (UnsyncedEvents)
-				return;
-
 			while (this.netEventsQueue.Count > 0)
 			{
 				UdpEvent evt;

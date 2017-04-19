@@ -111,7 +111,7 @@ namespace EventSystem
 			PubSub<NetworkReceiveAckEvent<byte[]>>.Publish(new NetworkReceiveAckEvent<byte[]>(reader.GetBytes(), channel, UdpManager, peer));
 		}
 
-		public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader, UnconnectedMessageType messageType)
+		public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader)
 		{
 			IProtocolPacket packet = null;
 						if ((packet = new ClientChatMessage()) != null && packet.Deserialize(reader))

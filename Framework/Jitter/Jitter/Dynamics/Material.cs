@@ -5,8 +5,6 @@ using System.Text;
 namespace Jitter.Dynamics
 {
 
-    // TODO: Check values, Documenation
-    // Maybe some default materials, aka Material.Soft?
     public class Material
     {
 

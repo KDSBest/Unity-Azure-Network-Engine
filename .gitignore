@@ -29,3 +29,6 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+/.gitattributes
+/Samples/JitterTools/Temp/UnityVS_obj/Debug/DesignTimeResolveAssemblyReferencesInput.cache
+/Samples/JitterTools/Temp/UnityVS_obj/Debug/build.force

@@ -16,8 +16,6 @@ namespace ReliableUdp.Enums
 		UnconnectedMessage,
 		MtuCheck,
 		MtuOk,
-		DiscoveryRequest,
-		DiscoveryResponse,
 		Merged
 	}
 }

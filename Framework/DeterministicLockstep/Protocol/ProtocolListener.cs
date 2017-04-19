@@ -81,7 +81,7 @@ namespace DeterministicLockstep.Protocol
 			PubSub<NetworkReceiveAckEvent<byte[]>>.Publish(new NetworkReceiveAckEvent<byte[]>(reader.GetBytes(), channel, UdpManager, peer));
 		}
 
-		public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader, UnconnectedMessageType messageType)
+		public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader)
 		{
 			IProtocolPacket packet = null;
 			if ((packet = new ClientCommand<T>()) != null && packet.Deserialize(reader))

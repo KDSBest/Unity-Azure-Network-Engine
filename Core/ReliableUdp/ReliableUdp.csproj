@@ -55,6 +55,11 @@
     <Compile Include="Enums\DisconnectReason.cs" />
     <Compile Include="BitUtility\BitHelper.cs" />
     <Compile Include="Packet\IProtocolPacket.cs" />
+    <Compile Include="Simulation\IncomingData.cs" />
+    <Compile Include="Simulation\INetworkSimulation.cs" />
+    <Compile Include="Simulation\NetworkLatencySimulation.cs" />
+    <Compile Include="Simulation\NetworkLossAndLatencySimulation.cs" />
+    <Compile Include="Simulation\NetworkPacketLossSimulation.cs" />
     <Compile Include="Utility\FlowMode.cs" />
     <Compile Include="Const\HeaderSize.cs" />
     <Compile Include="Utility\IncomingFragments.cs" />
@@ -79,7 +84,6 @@
     <Compile Include="UdpPeerCollection.cs" />
     <Compile Include="UdpSocket.cs" />
     <Compile Include="UdpThread.cs" />
-    <Compile Include="Enums\UnconnectedMessageType.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Utility\Utility.csproj">
@@ -87,7 +91,9 @@
       <Name>Utility</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Ping\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

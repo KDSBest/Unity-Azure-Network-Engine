@@ -67,7 +67,7 @@ namespace CoreTest
 				}
 			}
 
-			public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader, UnconnectedMessageType messageType)
+			public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader)
 			{
 
 			}
@@ -120,7 +120,7 @@ namespace CoreTest
 					Console.WriteLine($"[Server] Packet Ack Received: {packet.StrTest} - {packet.ByteTest} - {packet.IntTest} - {packet.DoubleTest}");
 			}
 
-			public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader, UnconnectedMessageType messageType)
+			public void OnNetworkReceiveUnconnected(UdpEndPoint remoteEndPoint, UdpDataReader reader)
 			{
 				Console.WriteLine("[Server] ReceiveUnconnected: {0}", reader.GetString(100));
 			}
@@ -208,8 +208,7 @@ namespace CoreTest
 			//Server
 			this.serverListener = new ServerListener();
 
-			UdpManager server = new UdpManager(this.serverListener, 2, "myapp1");
-			//server.ReuseAddress = true;
+			UdpManager server = new UdpManager(this.serverListener, "myapp1", 2);
 			if (!server.Start(9051))
 			{
 				Console.WriteLine("Server start failed");
@@ -221,9 +220,6 @@ namespace CoreTest
 			this.clientListener = new ClientListener(channel);
 
 			UdpManager client1 = new UdpManager(this.clientListener, "myapp1");
-			//client1.SimulateLatency = true;
-			client1.SimulationMaxLatency = 1500;
-			client1.MergeEnabled = true;
 			if (!client1.Start())
 			{
 				Console.WriteLine("Client1 start failed");
@@ -232,8 +228,6 @@ namespace CoreTest
 			client1.Connect("127.0.0.1", 9051);
 
 			UdpManager client2 = new UdpManager(this.clientListener, "myapp1");
-			//client2.SimulateLatency = true;
-			client2.SimulationMaxLatency = 1500;
 			client2.Start();
 			client2.Connect("::1", 9051);
 
