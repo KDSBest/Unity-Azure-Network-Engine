@@ -8,7 +8,7 @@ namespace ReliableUdp.Simulation
 	public class NetworkLatencySimulation : INetworkSimulation
 	{
 		private readonly Random randomGenerator = new Random();
-		private readonly List<IncomingData> pingSimulationList = new List<IncomingData>();
+		private readonly List<IncomingData> incomingData = new List<IncomingData>();
 		private const int TRESHOLD = 5;
 
 		public int SimulationMinLatencyInMs { get; set; }
@@ -23,15 +23,15 @@ namespace ReliableUdp.Simulation
 		public void Update(Action<byte[], int, UdpEndPoint> dataReceived)
 		{
 			var time = DateTime.UtcNow;
-			lock (this.pingSimulationList)
+			lock (this.incomingData)
 			{
-				for (int i = 0; i < this.pingSimulationList.Count; i++)
+				for (int i = 0; i < this.incomingData.Count; i++)
 				{
-					var incomingData = this.pingSimulationList[i];
+					var incomingData = this.incomingData[i];
 					if (incomingData.Time <= time)
 					{
 						dataReceived(incomingData.Data, incomingData.Data.Length, incomingData.EndPoint);
-						this.pingSimulationList.RemoveAt(i);
+						this.incomingData.RemoveAt(i);
 						i--;
 					}
 				}
@@ -46,9 +46,9 @@ namespace ReliableUdp.Simulation
 				byte[] holdedData = new byte[length];
 				Buffer.BlockCopy(data, 0, holdedData, 0, length);
 
-				lock (this.pingSimulationList)
+				lock (this.incomingData)
 				{
-					this.pingSimulationList.Add(new IncomingData
+					this.incomingData.Add(new IncomingData
 					{
 						Data = holdedData,
 						EndPoint = endPoint,

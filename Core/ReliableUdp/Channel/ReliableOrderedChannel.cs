@@ -180,9 +180,9 @@ namespace ReliableUdp.Channel
 					if (currentPacket.TimeStamp.HasValue)
 					{
 						double packetHoldTime = (currentTime - currentPacket.TimeStamp.Value).TotalMilliseconds;
-						if (packetHoldTime > this.peer.ResendDelay)
+						if (packetHoldTime > this.peer.NetworkStatisticManagement.ResendDelay)
 						{
-							Factory.Get<IUdpLogger>().Log($"Resend: {(int)packetHoldTime} > {this.peer.ResendDelay}.");
+							Factory.Get<IUdpLogger>().Log($"Resend: {(int)packetHoldTime} > {this.peer.NetworkStatisticManagement.ResendDelay}.");
 							packetFound = true;
 						}
 					}

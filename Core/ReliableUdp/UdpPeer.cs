@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using ReliableUdp.NetworkStatistic;
+
 using Factory = Utility.Factory;
 
 namespace ReliableUdp
@@ -19,28 +21,6 @@ namespace ReliableUdp
 
 	public class UdpPeer
 	{
-		//Flow control
-		private int currentFlowMode;
-		private int sendedPacketsCount;
-		private int flowTimer;
-
-		//Ping and RTT
-		private int ping;
-		private int rtt;
-		private int avgRtt;
-		private int rttCount;
-		private int goodRttCount;
-		private SequenceNumber pingSequence = new SequenceNumber(0);
-		private SequenceNumber remotePingSequence = new SequenceNumber(0);
-		private double resendDelay = 27.0;
-
-		private int pingSendTimer;
-		private const int RTT_RESET_DELAY = 1000;
-		private int rttResetTimer;
-
-		private DateTime pingTimeStart;
-		private int timeSinceLastPacket;
-
 		//Common            
 		private readonly UdpEndPoint remoteEndPoint;
 		private readonly UdpManager peerListener;
@@ -49,6 +29,8 @@ namespace ReliableUdp
 
 		//Channels
 		public Dictionary<ChannelType, IChannel> Channels = new Dictionary<ChannelType, IChannel>();
+
+		public NetworkStatisticManagement NetworkStatisticManagement { get; set; }
 
 		//MTU
 		private int mtu = Const.Mtu.PossibleValues[0];
@@ -60,9 +42,6 @@ namespace ReliableUdp
 		private const int MAX_MTU_CHECK_ATTEMPTS = 4;
 
 		public const int PROTOCOL_ID = 1;
-
-		public const int FLOW_INCREASE_THRESHOLD = 4;
-		public const int FLOW_UPDATE_TIME = 1000;
 
 		private readonly object mtuMutex = new object();
 
@@ -96,34 +75,14 @@ namespace ReliableUdp
 			get { return this.remoteEndPoint; }
 		}
 
-		public int Ping
-		{
-			get { return this.ping; }
-		}
-
-		public int CurrentFlowMode
-		{
-			get { return this.currentFlowMode; }
-		}
-
 		public int Mtu
 		{
 			get { return this.mtu; }
 		}
 
-		public int TimeSinceLastPacket
-		{
-			get { return this.timeSinceLastPacket; }
-		}
-
 		public UdpManager UdpManager
 		{
 			get { return this.peerListener; }
-		}
-
-		public double ResendDelay
-		{
-			get { return this.resendDelay; }
 		}
 
 		/// <summary>
@@ -133,13 +92,10 @@ namespace ReliableUdp
 
 		public UdpPeer(UdpManager peerListener, UdpEndPoint remoteEndPoint, long connectId)
 		{
+			this.NetworkStatisticManagement = new NetworkStatisticManagement();
 			this.packetPool = peerListener.PacketPool;
 			this.peerListener = peerListener;
 			this.remoteEndPoint = remoteEndPoint;
-
-			this.avgRtt = 0;
-			this.rtt = 0;
-			this.pingSendTimer = 0;
 
 			Channels.Add(ChannelType.Unreliable, Factory.Get<IUnreliableChannel>());
 			Channels.Add(ChannelType.UnreliableOrdered, Factory.Get<IUnreliableOrderedChannel>());
@@ -189,8 +145,7 @@ namespace ReliableUdp
 
 		private void SendConnectAccept()
 		{
-			//Reset connection timer
-			this.timeSinceLastPacket = 0;
+			this.NetworkStatisticManagement.PacketReceived();
 
 			//Make initial packet
 			var connectPacket = this.packetPool.Get(PacketType.ConnectAccept, 8);
@@ -214,7 +169,7 @@ namespace ReliableUdp
 			}
 
 			Factory.Get<IUdpLogger>().Log("Received Connection accepted.");
-			this.timeSinceLastPacket = 0;
+			this.NetworkStatisticManagement.PacketReceived();
 			this.connectionState = ConnectionState.Connected;
 			return true;
 		}
@@ -325,7 +280,7 @@ namespace ReliableUdp
 			SendPacket(packet);
 		}
 
-		private void CreateAndSend(PacketType type, SequenceNumber sequence)
+		public void CreateAndSend(PacketType type, SequenceNumber sequence)
 		{
 			UdpPacket packet = this.packetPool.Get(type, 0);
 			packet.Sequence = sequence;
@@ -369,50 +324,6 @@ namespace ReliableUdp
 				default:
 					throw new Exception("Unknown packet type: " + packet.Type);
 			}
-		}
-
-		private void UpdateRoundTripTime(int roundTripTime)
-		{
-			//Calc average round trip time
-			this.rtt += roundTripTime;
-			this.rttCount++;
-			this.avgRtt = this.rtt / this.rttCount;
-
-			//flowmode 0 = fastest
-			//flowmode max = lowest
-
-			if (this.avgRtt < this.peerListener.GetStartRtt(this.currentFlowMode - 1))
-			{
-				if (this.currentFlowMode <= 0)
-				{
-					//Already maxed
-					return;
-				}
-
-				this.goodRttCount++;
-				if (this.goodRttCount > FLOW_INCREASE_THRESHOLD)
-				{
-					this.goodRttCount = 0;
-					this.currentFlowMode--;
-
-					Factory.Get<IUdpLogger>().Log($"Increased flow speed, RTT {this.avgRtt}, PPS {this.peerListener.GetPacketsPerSecond(this.currentFlowMode)}");
-				}
-			}
-			else if (this.avgRtt > this.peerListener.GetStartRtt(this.currentFlowMode))
-			{
-				this.goodRttCount = 0;
-				if (this.currentFlowMode < this.peerListener.GetMaxFlowMode())
-				{
-					this.currentFlowMode++;
-					Factory.Get<IUdpLogger>().Log($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.peerListener.GetPacketsPerSecond(this.currentFlowMode)}");
-				}
-			}
-
-			//recalc resend delay
-			double avgRtt = this.avgRtt;
-			if (avgRtt <= 0.0)
-				avgRtt = 0.1;
-			this.resendDelay = 25 + (avgRtt * 2.1); // 25 ms + double rtt
 		}
 
 		public void AddIncomingAck(UdpPacket p, ChannelType channel)
@@ -612,7 +523,7 @@ namespace ReliableUdp
 		//Process incoming packet
 		public void ProcessPacket(UdpPacket packet)
 		{
-			this.timeSinceLastPacket = 0;
+			this.NetworkStatisticManagement.PacketReceived();
 
 			Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
 			switch (packet.Type)
@@ -648,32 +559,12 @@ namespace ReliableUdp
 					break;
 				//If we get ping, send pong
 				case PacketType.Ping:
-					if ((packet.Sequence - this.remotePingSequence).Value < 0)
-					{
-						this.packetPool.Recycle(packet);
-						break;
-					}
-
-					Factory.Get<IUdpLogger>().Log("Ping receive... Send Pong...");
-					this.remotePingSequence = packet.Sequence;
-					this.packetPool.Recycle(packet);
-
-					//send
-					CreateAndSend(PacketType.Pong, this.remotePingSequence);
+					this.NetworkStatisticManagement.HandlePing(this, packet);
 					break;
 
 				//If we get pong, calculate ping time and rtt
 				case PacketType.Pong:
-					if ((packet.Sequence - this.pingSequence).Value < 0)
-					{
-						this.packetPool.Recycle(packet);
-						break;
-					}
-					this.pingSequence = packet.Sequence;
-					int rtt = (int)(DateTime.UtcNow - this.pingTimeStart).TotalMilliseconds;
-					UpdateRoundTripTime(rtt);
-					Factory.Get<IUdpLogger>().Log($"Ping {rtt}");
-					this.packetPool.Recycle(packet);
+					this.NetworkStatisticManagement.HandlePong(this, packet);
 					break;
 
 				//Process ack
@@ -765,8 +656,7 @@ namespace ReliableUdp
 				}
 			}
 
-			//Increase counter
-			this.sendedPacketsCount += currentSended;
+			this.NetworkStatisticManagement.IncreaseSendedPacketCount(currentSended);
 
 			//If merging enabled
 			if (this.mergePos > 0)
@@ -801,7 +691,6 @@ namespace ReliableUdp
 				return;
 			}
 
-			this.timeSinceLastPacket += deltaTime;
 			if (this.connectionState == ConnectionState.InProgress)
 			{
 				this.connectTimer += deltaTime;
@@ -821,19 +710,7 @@ namespace ReliableUdp
 				return;
 			}
 
-			//Get current flow mode
-			int maxSendPacketsCount = this.peerListener.GetPacketsPerSecond(this.currentFlowMode);
-			int currentMaxSend;
-
-			if (maxSendPacketsCount > 0)
-			{
-				int availableSendPacketsCount = maxSendPacketsCount - this.sendedPacketsCount;
-				currentMaxSend = Math.Min(availableSendPacketsCount, (maxSendPacketsCount * deltaTime) / FLOW_UPDATE_TIME);
-			}
-			else
-			{
-				currentMaxSend = int.MaxValue;
-			}
+			int currentMaxSend = this.NetworkStatisticManagement.GetCurrentMaxSend(deltaTime);
 
 			//Pending acks
 			foreach (var chan in this.Channels.Values)
@@ -841,42 +718,7 @@ namespace ReliableUdp
 				chan.SendAcks();
 			}
 
-			//ResetFlowTimer
-			this.flowTimer += deltaTime;
-			if (this.flowTimer >= FLOW_UPDATE_TIME)
-			{
-				Factory.Get<IUdpLogger>().Log($"Reset flow timer, sended packets {this.sendedPacketsCount}");
-				this.sendedPacketsCount = 0;
-				this.flowTimer = 0;
-			}
-
-			//Send ping
-			this.pingSendTimer += deltaTime;
-			if (this.pingSendTimer >= this.peerListener.PingInterval)
-			{
-				Factory.Get<IUdpLogger>().Log("Send ping...");
-
-				//reset timer
-				this.pingSendTimer = 0;
-
-				//send ping
-				CreateAndSend(PacketType.Ping, this.pingSequence);
-
-				//reset timer
-				this.pingTimeStart = DateTime.UtcNow;
-			}
-
-			//RTT - round trip time
-			this.rttResetTimer += deltaTime;
-			if (this.rttResetTimer >= RTT_RESET_DELAY)
-			{
-				this.rttResetTimer = 0;
-				//Rtt update
-				this.rtt = this.avgRtt;
-				this.ping = this.avgRtt;
-				this.peerListener.ConnectionLatencyUpdated(this, this.ping);
-				this.rttCount = 1;
-			}
+			this.NetworkStatisticManagement.Update(this, deltaTime, this.peerListener.ConnectionLatencyUpdated);
 
 			//MTU - Maximum transmission unit
 			if (!this.finishMtu)

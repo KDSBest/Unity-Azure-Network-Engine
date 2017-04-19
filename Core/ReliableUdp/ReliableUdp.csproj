@@ -55,6 +55,7 @@
     <Compile Include="Enums\DisconnectReason.cs" />
     <Compile Include="BitUtility\BitHelper.cs" />
     <Compile Include="Packet\IProtocolPacket.cs" />
+    <Compile Include="NetworkStatistic\NetworkStatisticManagement.cs" />
     <Compile Include="Simulation\IncomingData.cs" />
     <Compile Include="Simulation\INetworkSimulation.cs" />
     <Compile Include="Simulation\NetworkLatencySimulation.cs" />
@@ -91,9 +92,7 @@
       <Name>Utility</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Ping\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

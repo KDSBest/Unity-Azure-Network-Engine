@@ -23,7 +23,6 @@ namespace ReliableUdp
 		public delegate void OnMessageReceived(byte[] data, int length, int errorCode, UdpEndPoint remoteEndPoint);
 
 		private readonly UdpSocket socket;
-		private readonly List<FlowMode> flowModes;
 
 		private readonly UdpThread logicThread;
 
@@ -38,8 +37,6 @@ namespace ReliableUdp
 		private readonly UdpPacketPool netPacketPool;
 
 		public int UpdateTime { get { return this.logicThread.SleepTime; } set { this.logicThread.SleepTime = value; } }
-		public const int DEFAULT_PING_INTERVAL = 1000;
-		public int PingInterval = DEFAULT_PING_INTERVAL;
 		public long DisconnectTimeout = 5000;
 		public bool MergeEnabled = true;
 		public int ReconnectDelay = 500;
@@ -84,40 +81,6 @@ namespace ReliableUdp
 			get { return this.connectKey; }
 		}
 
-		//Flow
-		public void AddFlowMode(int startRtt, int packetsPerSecond)
-		{
-			var fm = new FlowMode { PacketsPerSecond = packetsPerSecond, StartRtt = startRtt };
-
-			if (this.flowModes.Count > 0 && startRtt < this.flowModes[0].StartRtt)
-			{
-				this.flowModes.Insert(0, fm);
-			}
-			else
-			{
-				this.flowModes.Add(fm);
-			}
-		}
-
-		public int GetPacketsPerSecond(int flowMode)
-		{
-			if (flowMode < 0 || this.flowModes.Count == 0)
-				return 0;
-			return this.flowModes[flowMode].PacketsPerSecond;
-		}
-
-		public int GetMaxFlowMode()
-		{
-			return this.flowModes.Count - 1;
-		}
-
-		public int GetStartRtt(int flowMode)
-		{
-			if (flowMode < 0 || this.flowModes.Count == 0)
-				return 0;
-			return this.flowModes[flowMode].StartRtt;
-		}
-
 		public UdpPacketPool PacketPool
 		{
 			get { return this.netPacketPool; }
@@ -134,7 +97,6 @@ namespace ReliableUdp
 			this.logicThread = new UdpThread("LogicThread", updateTime, this.Update);
 			this.socket = new UdpSocket(this.HandlePacket);
 			this.netEventListener = listener;
-			this.flowModes = new List<FlowMode>();
 			this.netEventsQueue = new Queue<UdpEvent>();
 			this.netEventsPool = new Stack<UdpEvent>();
 			this.netPacketPool = new UdpPacketPool();
@@ -336,9 +298,9 @@ namespace ReliableUdp
 				for (int i = 0; i < this.peers.Count; i++)
 				{
 					var udpPeer = this.peers[i];
-					if (udpPeer.ConnectionState == ConnectionState.Connected && udpPeer.TimeSinceLastPacket > DisconnectTimeout)
+					if (udpPeer.ConnectionState == ConnectionState.Connected && udpPeer.NetworkStatisticManagement.TimeSinceLastPacket > DisconnectTimeout)
 					{
-						Factory.Get<IUdpLogger>().Log($"Disconnect by timeout {udpPeer.TimeSinceLastPacket} > {DisconnectTimeout}");
+						Factory.Get<IUdpLogger>().Log($"Disconnect by timeout {udpPeer.NetworkStatisticManagement.TimeSinceLastPacket} > {DisconnectTimeout}");
 						var netEvent = CreateEvent(UdpEventType.Disconnect);
 						netEvent.Peer = udpPeer;
 						netEvent.DisconnectReason = DisconnectReason.Timeout;
