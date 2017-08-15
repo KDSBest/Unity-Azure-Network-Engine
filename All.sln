@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReliableUdp", "Core\ReliableUdp\ReliableUdp.csproj", "{501D613E-8CBE-4DC3-888F-DBDA285558BE}"
 EndProject
@@ -40,8 +40,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Framework", "Framework", "{4F969015-7EFE-4623-BFFC-EB4B36B5E470}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TransportLayer", "TransportLayer", "{4134C8EB-980B-4640-AB2A-756D4F16FBAC}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jitter", "Framework\Jitter\Jitter.csproj", "{C9EB3D65-05BD-4194-82FC-1689734A8BBF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -157,14 +155,6 @@ Global
 		{06DCB6F1-B828-431A-91DE-38E011254AA4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{06DCB6F1-B828-431A-91DE-38E011254AA4}.Release|x64.ActiveCfg = Release|Any CPU
 		{06DCB6F1-B828-431A-91DE-38E011254AA4}.Release|x64.Build.0 = Release|Any CPU
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF}.Debug|x64.Build.0 = Debug|Any CPU
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF}.Release|x64.ActiveCfg = Release|Any CPU
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -185,6 +175,5 @@ Global
 		{24AAD14A-9843-425F-9407-D5866086ED51} = {1388A96E-0186-4719-99B7-A3EFA369AF60}
 		{37C95F66-7D73-4409-9F9F-ED379C28FDAC} = {1388A96E-0186-4719-99B7-A3EFA369AF60}
 		{06DCB6F1-B828-431A-91DE-38E011254AA4} = {4F969015-7EFE-4623-BFFC-EB4B36B5E470}
-		{C9EB3D65-05BD-4194-82FC-1689734A8BBF} = {4F969015-7EFE-4623-BFFC-EB4B36B5E470}
 	EndGlobalSection
 EndGlobal
