@@ -18,7 +18,10 @@ namespace ReliableUdp
 
 	public sealed class UdpSocket
 	{
-		public const string MULTICAST_GROUP_I_PV4 = "224.0.0.1";
+	    public const uint IOC_IN = 0x80000000;
+	    public const uint IOC_VENDOR = 0x18000000;
+	    public const uint SIO_UDP_CONNRESET = IOC_IN | IOC_VENDOR | 12;
+        public const string MULTICAST_GROUP_I_PV4 = "224.0.0.1";
 		public const string MULTICAST_GROUP_I_PV6 = "FF02:0:0:0:0:0:0:1";
 		public const int SOCKET_BUFFER_SIZE = 1024 * 1024 * 2; //2mb
 		public const int SOCKET_TTL = 255;
@@ -108,6 +111,7 @@ namespace ReliableUdp
 		public bool Bind(int port, bool reuseAddress)
 		{
 			this.udpSocketv4 = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+		    this.udpSocketv4.IOControl(unchecked((int)SIO_UDP_CONNRESET), new byte[] { Convert.ToByte(false) }, null);
 			this.udpSocketv4.Blocking = false;
 			this.udpSocketv4.ReceiveBufferSize = SOCKET_BUFFER_SIZE;
 			this.udpSocketv4.SendBufferSize = SOCKET_BUFFER_SIZE;
@@ -147,6 +151,7 @@ namespace ReliableUdp
 			port = this.localEndPoint.Port;
 
 			this.udpSocketv6 = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+		    this.udpSocketv6.IOControl(unchecked((int) SIO_UDP_CONNRESET), new byte[] {Convert.ToByte(false)}, null);
 			this.udpSocketv6.Blocking = false;
 			this.udpSocketv6.ReceiveBufferSize = SOCKET_BUFFER_SIZE;
 			this.udpSocketv6.SendBufferSize = SOCKET_BUFFER_SIZE;
