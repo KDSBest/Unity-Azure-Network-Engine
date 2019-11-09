@@ -57,5 +57,5 @@
 		/// <param name="peer">Peer with updated latency</param>
 		/// <param name="latency">latency value in milliseconds</param>
 		void OnNetworkLatencyUpdate(UdpPeer peer, int latency);
-	}
+    }
 }

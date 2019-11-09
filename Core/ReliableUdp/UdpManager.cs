@@ -94,6 +94,7 @@ namespace ReliableUdp
 			this.Settings.ConnectKey = connectKey;
 			this.peers = new UdpPeerCollection(maxConnections);
 			this.maxConnections = maxConnections;
+
 			listener.UdpManager = this;
 		}
 
@@ -357,12 +358,29 @@ namespace ReliableUdp
 			}
 		}
 
-		/// <summary>
-		/// Send data to all connected peers
-		/// </summary>
-		/// <param name="writer">DataWriter with data</param>
-		/// <param name="channelType">Send options (reliable, unreliable, etc.)</param>
-		public void SendToAll(UdpDataWriter writer, Enums.ChannelType channelType)
+        public void SendTo(long id, UdpDataWriter writer, Enums.ChannelType channelType)
+        {
+            SendTo(id, writer.Data, 0, writer.Length, channelType);
+        }
+
+        private void SendTo(long id, byte[] data, int start, int length, ChannelType channelType)
+        {
+            lock (this.peers)
+            {
+                UdpPeer peer;
+                if(peers.TryGetValue(id, out peer))
+                {
+                    peer.Send(data, start, length, channelType);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Send data to all connected peers
+        /// </summary>
+        /// <param name="writer">DataWriter with data</param>
+        /// <param name="channelType">Send options (reliable, unreliable, etc.)</param>
+        public void SendToAll(UdpDataWriter writer, Enums.ChannelType channelType)
 		{
 			SendToAll(writer.Data, 0, writer.Length, channelType);
 		}

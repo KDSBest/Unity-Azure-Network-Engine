@@ -1,114 +1,34 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{501D613E-8CBE-4DC3-888F-DBDA285558BE}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ReliableUdp</RootNamespace>
-    <AssemblyName>ReliableUdp</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>
-    </TargetFrameworkProfile>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+    <ServerGarbageCollection>True</ServerGarbageCollection>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
+    <ApplicationIcon />
+    <StartupObject />
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <PlatformTarget>x64</PlatformTarget>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <PlatformTarget>x64</PlatformTarget>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
   </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
+    <ProjectReference Include="..\Utility\Utility.csproj" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="BitUtility\ConverterHelperDouble.cs" />
-    <Compile Include="BitUtility\ConverterHelperFloat.cs" />
-    <Compile Include="Channel\IChannel.cs" />
-    <Compile Include="Channel\IReliableChannel.cs" />
-    <Compile Include="Channel\IReliableOrderedChannel.cs" />
-    <Compile Include="Channel\IUnreliableChannel.cs" />
-    <Compile Include="Channel\IUnreliableOrderedChannel.cs" />
-    <Compile Include="Channel\PendingPacket.cs" />
-    <Compile Include="Channel\ReliableUnorderedChannel.cs" />
-    <Compile Include="Channel\ReliableOrderedChannel.cs" />
-    <Compile Include="Channel\UnreliableOrderedChannel.cs" />
-    <Compile Include="Channel\UnreliableUnorderedChannel.cs" />
-    <Compile Include="Enums\ConnectionState.cs" />
-    <Compile Include="DisconnectInfo.cs" />
-    <Compile Include="Enums\DisconnectReason.cs" />
-    <Compile Include="BitUtility\BitHelper.cs" />
-    <Compile Include="NetworkStatistic\FlowManagement.cs" />
-    <Compile Include="PacketHandler\ConnectionRequestHandler.cs" />
-    <Compile Include="PacketHandler\FragmentHandler.cs" />
-    <Compile Include="PacketHandler\MergeHandler.cs" />
-    <Compile Include="PacketHandler\MtuHandler.cs" />
-    <Compile Include="PacketHandler\PingPongHandler.cs" />
-    <Compile Include="Packet\IProtocolPacket.cs" />
-    <Compile Include="NetworkStatistic\NetworkStatisticManagement.cs" />
-    <Compile Include="Simulation\IncomingData.cs" />
-    <Compile Include="Simulation\INetworkSimulation.cs" />
-    <Compile Include="Simulation\NetworkLatencySimulation.cs" />
-    <Compile Include="Simulation\NetworkLossAndLatencySimulation.cs" />
-    <Compile Include="Simulation\NetworkPacketLossSimulation.cs" />
-    <Compile Include="UdpSettings.cs" />
-    <Compile Include="Utility\FlowMode.cs" />
-    <Compile Include="Const\HeaderSize.cs" />
-    <Compile Include="PacketHandler\IncomingFragments.cs" />
-    <Compile Include="IUdpEventListener.cs" />
-    <Compile Include="Logging\DebugLogger.cs" />
-    <Compile Include="FactoryRegistrations.cs" />
-    <Compile Include="Logging\IUdpLogger.cs" />
-    <Compile Include="Const\MTU.cs" />
-    <Compile Include="Enums\PacketType.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Enums\ChannelType.cs" />
-    <Compile Include="Utility\SequenceNumber.cs" />
-    <Compile Include="Utility\UdpDataReader.cs" />
-    <Compile Include="Utility\UdpDataWriter.cs" />
-    <Compile Include="UdpEndpoint.cs" />
-    <Compile Include="UdpEvent.cs" />
-    <Compile Include="Enums\UdpEventType.cs" />
-    <Compile Include="UdpManager.cs" />
-    <Compile Include="Packet\UdpPacket.cs" />
-    <Compile Include="Packet\UdpPacketPool.cs" />
-    <Compile Include="UdpPeer.cs" />
-    <Compile Include="UdpPeerCollection.cs" />
-    <Compile Include="UdpSocket.cs" />
-    <Compile Include="UdpThread.cs" />
+    <Folder Include="Properties\" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Utility\Utility.csproj">
-      <Project>{617ac602-e602-4b54-8f13-ee3a5c606666}</Project>
-      <Name>Utility</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>

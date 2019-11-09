@@ -27,7 +27,7 @@
 
 		public override bool Equals(object obj)
 		{
-			return this == obj;
+			return this == (SequenceNumber)obj;
 		}
 
 		public static bool operator !=(SequenceNumber a, SequenceNumber b)
