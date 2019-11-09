@@ -32,8 +32,4 @@ sysinfo.txt
 /.gitattributes
 /Samples/JitterTools/Temp/UnityVS_obj/Debug/DesignTimeResolveAssemblyReferencesInput.cache
 /Samples/JitterTools/Temp/UnityVS_obj/Debug/build.force
-/.vs/All/DesignTimeBuild/.dtbcache
-/.vs/All/v15/Server/sqlite3/db.lock
-/.vs/All/v15/Server/sqlite3/storage.ide
-/.vs/All/v15/Server/sqlite3/storage.ide-shm
-/.vs/All/v15/Server/sqlite3/storage.ide-wal
+.vs/
