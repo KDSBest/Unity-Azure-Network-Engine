@@ -50,7 +50,7 @@ namespace ReliableUdp.PacketHandler
 				this.SendConnectAccept(peer);
 			}
 
-			Factory.Get<IUdpLogger>().Log($"Connection Id is {this.connectId}.");
+			// Factory.Get<IUdpLogger>().Log($"Connection Id is {this.connectId}.");
 		}
 
 		private void SendConnectRequest(UdpPeer peer)
@@ -88,7 +88,7 @@ namespace ReliableUdp.PacketHandler
 
 			peer.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 			this.connectionState = ConnectionState.Connected;
-			Factory.Get<IUdpLogger>().Log("Received Connection accepted.");
+			// Factory.Get<IUdpLogger>().Log("Received Connection accepted.");
 			return true;
 		}
 
@@ -100,7 +100,7 @@ namespace ReliableUdp.PacketHandler
 				this.connectId = newId;
 			}
 
-			Factory.Get<IUdpLogger>().Log($"Connect Request Last Id {this.ConnectId} NewId {newId} EP {peer.EndPoint}");
+			// Factory.Get<IUdpLogger>().Log($"Connect Request Last Id {this.ConnectId} NewId {newId} EP {peer.EndPoint}");
 			this.SendConnectAccept(peer);
 			peer.Recycle(packet);
 		}

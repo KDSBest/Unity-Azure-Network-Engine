@@ -48,7 +48,7 @@ namespace ReliableUdp.PacketHandler
 				}
 				this.mtuCheckAttempts = 0;
 
-				Factory.Get<IUdpLogger>().Log($"MTU check. Resend {packet.RawData[1]}");
+				// Factory.Get<IUdpLogger>().Log($"MTU check. Resend {packet.RawData[1]}");
 				var mtuOkPacket = peer.GetPacketFromPool(PacketType.MtuOk, 1);
 				mtuOkPacket.RawData[1] = packet.RawData[1];
 				peer.SendPacket(mtuOkPacket);
@@ -66,7 +66,7 @@ namespace ReliableUdp.PacketHandler
 					this.finishMtu = true;
 				}
 
-				Factory.Get<IUdpLogger>().Log($"MTU is set to {this.mtu}");
+				// Factory.Get<IUdpLogger>().Log($"MTU is set to {this.mtu}");
 			}
 		}
 

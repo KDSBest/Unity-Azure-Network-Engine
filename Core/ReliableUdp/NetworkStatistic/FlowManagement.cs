@@ -60,7 +60,7 @@ namespace ReliableUdp.NetworkStatistic
 			this.flowTimer += deltaTime;
 			if (this.flowTimer >= FLOW_UPDATE_TIME)
 			{
-				Factory.Get<IUdpLogger>().Log($"Reset flow timer, sended packets {this.sendedPacketsCount}");
+				// Factory.Get<IUdpLogger>().Log($"Reset flow timer, sended packets {this.sendedPacketsCount}");
 				this.sendedPacketsCount = 0;
 				this.flowTimer = 0;
 			}

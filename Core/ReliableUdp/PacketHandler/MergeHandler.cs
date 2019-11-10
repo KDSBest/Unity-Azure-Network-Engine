@@ -70,7 +70,7 @@ namespace ReliableUdp.PacketHandler
 			{
 				if (this.mergeCount > 1)
 				{
-					Factory.Get<IUdpLogger>().Log($"Send merged {this.mergePos}, count {this.mergeCount}");
+					// Factory.Get<IUdpLogger>().Log($"Send merged {this.mergePos}, count {this.mergeCount}");
 					peer.SendRaw(this.mergeData.RawData, 0, HeaderSize.DEFAULT + this.mergePos, peer.EndPoint);
 				}
 				else

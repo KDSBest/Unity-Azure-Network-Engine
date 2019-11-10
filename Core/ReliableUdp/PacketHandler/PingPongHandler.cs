@@ -34,7 +34,7 @@ namespace ReliableUdp.PacketHandler
 				return;
 			}
 
-			Factory.Get<IUdpLogger>().Log("Ping receive... Send Pong...");
+			// Factory.Get<IUdpLogger>().Log("Ping receive... Send Pong...");
 			this.remotePingSequence = packet.Sequence;
 			peer.Recycle(packet);
 
@@ -51,7 +51,7 @@ namespace ReliableUdp.PacketHandler
 			this.pingSequence = packet.Sequence;
 			int rtt = (int)(DateTime.UtcNow - this.pingTimeStart).TotalMilliseconds;
 			peer.NetworkStatisticManagement.UpdateRoundTripTime(rtt);
-			Factory.Get<IUdpLogger>().Log($"Ping {rtt}");
+			// Factory.Get<IUdpLogger>().Log($"Ping {rtt}");
 			peer.Recycle(packet);
 		}
 
@@ -61,7 +61,7 @@ namespace ReliableUdp.PacketHandler
 			this.pingSendTimer += deltaTime;
 			if (this.pingSendTimer >= PingInterval)
 			{
-				Factory.Get<IUdpLogger>().Log("Send ping...");
+				// Factory.Get<IUdpLogger>().Log("Send ping...");
 
 				//reset timer
 				this.pingSendTimer = 0;

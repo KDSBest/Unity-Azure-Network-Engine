@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using ReliableUdp.NetworkStatistic;
 using ReliableUdp.PacketHandler;
 
-using Factory = Utility.Factory;
-
 namespace ReliableUdp
 {
 	using Channel;
@@ -32,7 +30,9 @@ namespace ReliableUdp
 		public ConnectionRequestHandler PacketConnectionRequestHandler { get; set; }
 		public FragmentHandler PacketFragmentHandler { get; set; }
 
-		public ConnectionState ConnectionState
+        public static readonly int DefaultWindowSize = 64;
+
+        public ConnectionState ConnectionState
 		{
 			get { return this.PacketConnectionRequestHandler.ConnectionState; }
 		}
@@ -70,10 +70,10 @@ namespace ReliableUdp
 			this.PacketConnectionRequestHandler.Initialize(this, connectId);
 			this.PacketFragmentHandler = new FragmentHandler();
 
-			this.Channels.Add(ChannelType.Unreliable, Factory.Get<IUnreliableChannel>());
-			this.Channels.Add(ChannelType.UnreliableOrdered, Factory.Get<IUnreliableOrderedChannel>());
-			this.Channels.Add(ChannelType.Reliable, Factory.Get<IReliableChannel>());
-			this.Channels.Add(ChannelType.ReliableOrdered, Factory.Get<IReliableOrderedChannel>());
+			this.Channels.Add(ChannelType.Unreliable, new UnreliableUnorderedChannel());
+            this.Channels.Add(ChannelType.UnreliableOrdered, new UnreliableOrderedChannel());
+			this.Channels.Add(ChannelType.Reliable, new ReliableUnorderedChannel(DefaultWindowSize));
+			this.Channels.Add(ChannelType.ReliableOrdered, new ReliableOrderedChannel(DefaultWindowSize));
 
 			foreach (var chan in this.Channels.Values)
 			{
@@ -143,7 +143,7 @@ namespace ReliableUdp
 
 		public void SendPacket(UdpPacket packet)
 		{
-			Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
+			// Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
 			switch (packet.Type)
 			{
 				case PacketType.Unreliable:
@@ -205,7 +205,7 @@ namespace ReliableUdp
 		{
 			this.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 
-			Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
+			// Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
 			switch (packet.Type)
 			{
 				case PacketType.ConnectAccept:
@@ -249,7 +249,7 @@ namespace ReliableUdp
 					break;
 
 				default:
-					Factory.Get<IUdpLogger>().Log($"Error! Unexpected packet type {packet.Type}");
+					// Factory.Get<IUdpLogger>().Log($"Error! Unexpected packet type {packet.Type}");
 					break;
 			}
 		}
@@ -261,7 +261,7 @@ namespace ReliableUdp
 				return;
 			}
 
-			Factory.Get<IUdpLogger>().Log($"Sending Packet {packet.Type}");
+			// Factory.Get<IUdpLogger>().Log($"Sending Packet {packet.Type}");
 			this.peerListener.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint);
 		}
 

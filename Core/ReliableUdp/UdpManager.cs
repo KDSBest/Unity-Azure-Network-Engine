@@ -5,8 +5,6 @@ using System.Text;
 
 using ReliableUdp.PacketHandler;
 
-using Factory = Utility.Factory;
-
 namespace ReliableUdp
 {
 	using System.Threading;
@@ -132,7 +130,7 @@ namespace ReliableUdp
 			}
 			if (errorCode == 10040)
 			{
-				Factory.Get<IUdpLogger>().Log($"10040, datalen {length}");
+				// Factory.Get<IUdpLogger>().Log($"10040, datalen {length}");
 				return false;
 			}
 
@@ -157,7 +155,7 @@ namespace ReliableUdp
 				{
 					data = null;
 					count = 0;
-					Factory.Get<IUdpLogger>().Log("Disconnect data size is more than MTU");
+					// Factory.Get<IUdpLogger>().Log("Disconnect data size is more than MTU");
 				}
 
 				var disconnectPacket = this.netPacketPool.Get(PacketType.Disconnect, 8 + count);
@@ -211,8 +209,7 @@ namespace ReliableUdp
 					if (udpPeer.ConnectionState == ConnectionState.Connected
 						&& udpPeer.NetworkStatisticManagement.TimeSinceLastPacket > this.Settings.DisconnectTimeout)
 					{
-						Factory.Get<IUdpLogger>()
-							.Log($"Disconnect by timeout {udpPeer.NetworkStatisticManagement.TimeSinceLastPacket} > {this.Settings.DisconnectTimeout}");
+						// Factory.Get<IUdpLogger>().Log($"Disconnect by timeout {udpPeer.NetworkStatisticManagement.TimeSinceLastPacket} > {this.Settings.DisconnectTimeout}");
 						this.CreateDisconnectEvent(udpPeer, DisconnectReason.Timeout, 0);
 
 						this.RemovePeerAt(i);
@@ -263,7 +260,7 @@ namespace ReliableUdp
 			UdpPacket packet = this.netPacketPool.GetAndRead(reusableBuffer, 0, count);
 			if (packet == null)
 			{
-				Factory.Get<IUdpLogger>().Log($"Data Received but packet is null.");
+				// Factory.Get<IUdpLogger>().Log($"Data Received but packet is null.");
 				return;
 			}
 
@@ -307,14 +304,14 @@ namespace ReliableUdp
 					int protoId = System.BitConverter.ToInt32(packet.RawData, 1);
 					if (protoId != ConnectionRequestHandler.PROTOCOL_ID)
 					{
-						Factory.Get<IUdpLogger>().Log($"Peer connect rejected. Invalid Protocol Id.");
+						// Factory.Get<IUdpLogger>().Log($"Peer connect rejected. Invalid Protocol Id.");
 						return;
 					}
 
 					string peerKey = Encoding.UTF8.GetString(packet.RawData, 13, packet.Size - 13);
 					if (peerKey != this.Settings.ConnectKey)
 					{
-						Factory.Get<IUdpLogger>().Log($"Peer connect rejected. Invalid key {peerKey}.");
+						// Factory.Get<IUdpLogger>().Log($"Peer connect rejected. Invalid key {peerKey}.");
 						return;
 					}
 
@@ -322,7 +319,7 @@ namespace ReliableUdp
 					long connectionId = System.BitConverter.ToInt64(packet.RawData, 5);
 					//response with id
 					udpPeer = new UdpPeer(this, remoteEndPoint, connectionId);
-					Factory.Get<IUdpLogger>().Log($"Received Peer connect request Id {udpPeer.ConnectId} EP {remoteEndPoint}.");
+					// Factory.Get<IUdpLogger>().Log($"Received Peer connect request Id {udpPeer.ConnectId} EP {remoteEndPoint}.");
 
 					//clean incoming packet
 					this.netPacketPool.Recycle(packet);
@@ -343,7 +340,7 @@ namespace ReliableUdp
 			UdpPeer fromPeer;
 			if (this.peers.TryGetValue(remoteEndPoint, out fromPeer))
 			{
-				Factory.Get<IUdpLogger>().Log($"Received message.");
+				// Factory.Get<IUdpLogger>().Log($"Received message.");
 				this.CreateReceiveEvent(packet, channel, fromPeer);
 			}
 		}
@@ -353,7 +350,7 @@ namespace ReliableUdp
 			UdpPeer fromPeer;
 			if (this.peers.TryGetValue(remoteEndPoint, out fromPeer))
 			{
-				Factory.Get<IUdpLogger>().Log($"Received ack message.");
+				// Factory.Get<IUdpLogger>().Log($"Received ack message.");
 				this.CreateReceiveAckEvent(packet, channel, fromPeer);
 			}
 		}

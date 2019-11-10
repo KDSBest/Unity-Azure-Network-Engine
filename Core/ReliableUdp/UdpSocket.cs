@@ -1,22 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using Factory = Utility.Factory;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using ReliableUdp.Packet;
 
 namespace ReliableUdp
 {
-	using System.Net;
-	using System.Net.Sockets;
-	using System.Threading;
-
-	using ReliableUdp.Logging;
-	using ReliableUdp.Packet;
-
-	using Utility;
-
-	public sealed class UdpSocket
+    public sealed class UdpSocket
 	{
 	    public const uint IOC_IN = 0x80000000;
 	    public const uint IOC_VENDOR = 0x18000000;
@@ -93,17 +83,17 @@ namespace ReliableUdp
 					if (ex.SocketErrorCode == SocketError.ConnectionReset ||
 						 ex.SocketErrorCode == SocketError.MessageSize)
 					{
-						Factory.Get<IUdpLogger>().Log($"Ignored Error code {ex.SocketErrorCode} with execption {ex}.");
+						// Factory.Get<IUdpLogger>().Log($"Ignored Error code {ex.SocketErrorCode} with execption {ex}.");
 						continue;
 					}
 
-					Factory.Get<IUdpLogger>().Log($"Error code {ex.SocketErrorCode} with execption {ex}.");
+					// Factory.Get<IUdpLogger>().Log($"Error code {ex.SocketErrorCode} with execption {ex}.");
 					this.onMessageReceived(null, 0, (int)ex.SocketErrorCode, bufferNetEndPoint);
 					continue;
 				}
 
 				//All ok!
-				Factory.Get<IUdpLogger>().Log($"Received data from {bufferNetEndPoint} with result {result}.");
+				// Factory.Get<IUdpLogger>().Log($"Received data from {bufferNetEndPoint} with result {result}.");
 				this.onMessageReceived(receiveBuffer, result, 0, bufferNetEndPoint);
 			}
 		}
@@ -128,7 +118,7 @@ namespace ReliableUdp
 			}
 			catch (SocketException ex)
 			{
-				Factory.Get<IUdpLogger>().Log($"Broadcast error {ex}.");
+				// Factory.Get<IUdpLogger>().Log($"Broadcast error {ex}.");
 			}
 
 			if (!BindSocket(this.udpSocketv4, new IPEndPoint(IPAddress.Any, port)))
@@ -188,11 +178,11 @@ namespace ReliableUdp
 			try
 			{
 				socket.Bind(ep);
-				Factory.Get<IUdpLogger>().Log($"Successfully binded to port {((IPEndPoint)socket.LocalEndPoint).Port}.");
+				// Factory.Get<IUdpLogger>().Log($"Successfully binded to port {((IPEndPoint)socket.LocalEndPoint).Port}.");
 			}
 			catch (SocketException ex)
 			{
-				Factory.Get<IUdpLogger>().Log($"Bind error {ex}");
+				// Factory.Get<IUdpLogger>().Log($"Bind error {ex}");
 
 				if (ex.SocketErrorCode == SocketError.AddressFamilyNotSupported)
 				{
@@ -219,7 +209,7 @@ namespace ReliableUdp
 			}
 			catch (Exception ex)
 			{
-				Factory.Get<IUdpLogger>().Log(ex.ToString());
+				// Factory.Get<IUdpLogger>().Log(ex.ToString());
 				return false;
 			}
 			return true;
@@ -243,14 +233,14 @@ namespace ReliableUdp
 					result = this.udpSocketv6.SendTo(data, offset, size, SocketFlags.None, remoteEndPoint.EndPoint);
 				}
 
-				Factory.Get<IUdpLogger>().Log($"Send packet to {remoteEndPoint.EndPoint} with result {result}");
+				// Factory.Get<IUdpLogger>().Log($"Send packet to {remoteEndPoint.EndPoint} with result {result}");
 				return result;
 			}
 			catch (SocketException ex)
 			{
 				if (ex.SocketErrorCode != SocketError.MessageSize)
 				{
-					Factory.Get<IUdpLogger>().Log(ex.ToString());
+					// Factory.Get<IUdpLogger>().Log(ex.ToString());
 				}
 
 				errorCode = (int)ex.SocketErrorCode;
@@ -258,7 +248,7 @@ namespace ReliableUdp
 			}
 			catch (Exception ex)
 			{
-				Factory.Get<IUdpLogger>().Log(ex.ToString());
+				// Factory.Get<IUdpLogger>().Log(ex.ToString());
 				return -1;
 			}
 		}

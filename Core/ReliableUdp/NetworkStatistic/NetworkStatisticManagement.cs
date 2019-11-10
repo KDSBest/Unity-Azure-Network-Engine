@@ -80,7 +80,7 @@ namespace ReliableUdp.NetworkStatistic
 					this.goodRttCount = 0;
 					this.FlowManagement.CurrentFlowMode--;
 
-					Factory.Get<IUdpLogger>().Log($"Increased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+					// Factory.Get<IUdpLogger>().Log($"Increased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
 				}
 			}
 			else if (this.avgRtt > this.FlowManagement.GetStartRtt(this.FlowManagement.CurrentFlowMode))
@@ -89,7 +89,7 @@ namespace ReliableUdp.NetworkStatistic
 				if (this.FlowManagement.CurrentFlowMode < this.FlowManagement.GetMaxFlowMode())
 				{
 					this.FlowManagement.CurrentFlowMode++;
-					Factory.Get<IUdpLogger>().Log($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+					// Factory.Get<IUdpLogger>().Log($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
 				}
 			}
 
