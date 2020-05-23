@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 using ReliableUdp.BitUtility;
 using ReliableUdp.Enums;
-using ReliableUdp.Logging;
 using ReliableUdp.Packet;
-
-using Utility;
 
 namespace ReliableUdp.PacketHandler
 {
-	public class ConnectionRequestHandler
+    public class ConnectionRequestHandler
 	{
 		public const int PROTOCOL_ID = 1;
 

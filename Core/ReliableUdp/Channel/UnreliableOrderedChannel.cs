@@ -1,12 +1,12 @@
-using Utility;
 using ReliableUdp.Utility;
 
 namespace ReliableUdp.Channel
 {
 	using ReliableUdp.Enums;
 	using ReliableUdp.Packet;
+    using System.Collections.Concurrent;
 
-	public class UnreliableOrderedChannel : IUnreliableOrderedChannel
+    public class UnreliableOrderedChannel : IUnreliableOrderedChannel
 	{
 		private SequenceNumber localSequence = new SequenceNumber(0);
 		private SequenceNumber remoteSequence = new SequenceNumber(0);
@@ -25,8 +25,8 @@ namespace ReliableUdp.Channel
 
 		public bool SendNextPacket()
 		{
-			UdpPacket packet = this.outgoingPackets.Dequeue();
-			if (packet == null)
+            UdpPacket packet = null;
+            if(!this.outgoingPackets.TryDequeue(out packet))
 				return false;
 
 			this.localSequence.Value++;

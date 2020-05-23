@@ -203,8 +203,6 @@ namespace CoreTest
 
 		public void TestProtocolPackage(ChannelType channel)
 		{
-			FactoryRegistrations.Register();
-
 			//Server
 			this.serverListener = new ServerListener();
 

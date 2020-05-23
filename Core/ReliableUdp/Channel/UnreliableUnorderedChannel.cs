@@ -1,14 +1,10 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using Utility;
-
-namespace ReliableUdp.Channel
+﻿namespace ReliableUdp.Channel
 {
-	using ReliableUdp.Enums;
-	using ReliableUdp.Packet;
+    using ReliableUdp.Enums;
+    using ReliableUdp.Packet;
+    using System.Collections.Concurrent;
 
-	public class UnreliableUnorderedChannel : IUnreliableChannel
+    public class UnreliableUnorderedChannel : IUnreliableChannel
 	{
 		private readonly ConcurrentQueue<UdpPacket> outgoingPackets = new ConcurrentQueue<UdpPacket>();
 		private UdpPeer peer;
@@ -25,9 +21,9 @@ namespace ReliableUdp.Channel
 
 		public bool SendNextPacket()
 		{
-			UdpPacket packet = this.outgoingPackets.Dequeue();
+			UdpPacket packet = null;
 
-			if (packet == null)
+			if (!this.outgoingPackets.TryDequeue(out packet))
 				return false;
 
 			this.peer.SendRawData(packet);

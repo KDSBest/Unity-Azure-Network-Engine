@@ -1,19 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
+﻿
 using ReliableUdp.Const;
 using ReliableUdp.Enums;
-using ReliableUdp.Logging;
 using ReliableUdp.Packet;
-using ReliableUdp.Utility;
-
-using Utility;
 
 namespace ReliableUdp.PacketHandler
 {
-	public class MtuHandler
+    public class MtuHandler
 	{
 		private int mtu = Const.Mtu.PossibleValues[0];
 		private int mtuIdx;

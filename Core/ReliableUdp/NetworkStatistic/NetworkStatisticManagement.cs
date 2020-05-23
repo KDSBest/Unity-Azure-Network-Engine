@@ -1,18 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using ReliableUdp.Enums;
-using ReliableUdp.Logging;
-using ReliableUdp.Packet;
-using ReliableUdp.Utility;
-
-using Utility;
 
 namespace ReliableUdp.NetworkStatistic
 {
-	public class NetworkStatisticManagement
+    public class NetworkStatisticManagement
 	{
 		public FlowManagement FlowManagement { get; private set; }
 

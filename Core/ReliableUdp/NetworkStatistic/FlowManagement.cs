@@ -1,16 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using ReliableUdp.Logging;
 using ReliableUdp.Utility;
-
-using Utility;
 
 namespace ReliableUdp.NetworkStatistic
 {
-	public class FlowManagement
+    public class FlowManagement
 	{
 		public const int FLOW_INCREASE_THRESHOLD = 4;
 		public const int FLOW_UPDATE_TIME = 1000;

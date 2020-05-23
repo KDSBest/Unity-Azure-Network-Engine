@@ -1,18 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 using ReliableUdp.Enums;
-using ReliableUdp.Logging;
 using ReliableUdp.Packet;
 using ReliableUdp.Utility;
 
-using Utility;
-
 namespace ReliableUdp.PacketHandler
 {
-	public class PingPongHandler
+    public class PingPongHandler
 	{
 		private int pingSendTimer = 0;
 		private SequenceNumber pingSequence = new SequenceNumber(0);

@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 using ReliableUdp.BitUtility;
 using ReliableUdp.Const;
 using ReliableUdp.Enums;
-using ReliableUdp.Logging;
 using ReliableUdp.Packet;
-
-using Utility;
 
 namespace ReliableUdp.PacketHandler
 {
-	public class MergeHandler
+    public class MergeHandler
 	{
 		public bool Enabled { get; set; }
 		private UdpPacket mergeData;

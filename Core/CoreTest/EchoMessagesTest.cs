@@ -154,7 +154,6 @@ namespace CoreTest
 			messagesReceivedCount = 0;
 			clientMessagesReceivedCount = 0;
 			serverMessagesReceivedCount = 0;
-			FactoryRegistrations.Register();
 
 			//Server
 			this.serverListener = new ServerListener();

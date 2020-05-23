@@ -1,18 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 using ReliableUdp.Const;
 using ReliableUdp.Enums;
-using ReliableUdp.Logging;
 using ReliableUdp.Packet;
-
-using Utility;
 
 namespace ReliableUdp.PacketHandler
 {
-	public class FragmentHandler
+    public class FragmentHandler
 	{
 		private ushort fragmentId;
 		private readonly Dictionary<ushort, IncomingFragments> holdedFragments = new Dictionary<ushort, IncomingFragments>();

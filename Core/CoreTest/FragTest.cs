@@ -156,8 +156,6 @@ namespace CoreTest
 		[TestMethod]
 		public void TestFrag()
 		{
-			FactoryRegistrations.Register();
-
 			//Server
 			this.serverListener = new ServerListener();
 
