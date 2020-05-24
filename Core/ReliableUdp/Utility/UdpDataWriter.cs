@@ -78,7 +78,7 @@ namespace ReliableUdp.Utility
 		{
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + 4);
-			BitHelper.GetBytes(this._data, this.Position, value);
+			BitHelper.Write(this._data, this.Position, value);
 			this.Position += 4;
 		}
 
@@ -86,7 +86,7 @@ namespace ReliableUdp.Utility
 		{
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + 8);
-			BitHelper.GetBytes(this._data, this.Position, value);
+			BitHelper.Write(this._data, this.Position, value);
 			this.Position += 8;
 		}
 
@@ -94,7 +94,7 @@ namespace ReliableUdp.Utility
 		{
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + 8);
-			BitHelper.GetBytes(this._data, this.Position, value);
+			BitHelper.Write(this._data, this.Position, value);
 			this.Position += 8;
 		}
 
@@ -102,7 +102,7 @@ namespace ReliableUdp.Utility
 		{
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + 8);
-			BitHelper.GetBytes(this._data, this.Position, value);
+			BitHelper.Write(this._data, this.Position, value);
 			this.Position += 8;
 		}
 
@@ -110,7 +110,7 @@ namespace ReliableUdp.Utility
 		{
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + 4);
-			BitHelper.GetBytes(this._data, this.Position, value);
+			BitHelper.Write(this._data, this.Position, value);
 			this.Position += 4;
 		}
 
@@ -118,7 +118,7 @@ namespace ReliableUdp.Utility
 		{
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + 4);
-			BitHelper.GetBytes(this._data, this.Position, value);
+			BitHelper.Write(this._data, this.Position, value);
 			this.Position += 4;
 		}
 
@@ -126,7 +126,7 @@ namespace ReliableUdp.Utility
 		{
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + 2);
-			BitHelper.GetBytes(this._data, this.Position, value);
+			BitHelper.Write(this._data, this.Position, value);
 			this.Position += 2;
 		}
 
@@ -134,7 +134,7 @@ namespace ReliableUdp.Utility
 		{
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + 2);
-			BitHelper.GetBytes(this._data, this.Position, value);
+			BitHelper.Write(this._data, this.Position, value);
 			this.Position += 2;
 		}
 
@@ -290,7 +290,7 @@ namespace ReliableUdp.Utility
 		{
 			ushort len = value == null ? (ushort)0 : (ushort)value.Length;
 			this.Put(len);
-			for (int i = 0; i < value.Length; i++)
+			for (int i = 0; i < len; i++)
 			{
 				this.Put(value[i]);
 			}
@@ -304,12 +304,6 @@ namespace ReliableUdp.Utility
 			{
 				this.Put(value[i], maxLength);
 			}
-		}
-
-		public void Put(UdpEndPoint endPoint)
-		{
-			this.Put(endPoint.Host);
-			this.Put(endPoint.Port);
 		}
 
 		public void Put(string value)

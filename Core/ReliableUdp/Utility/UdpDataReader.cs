@@ -5,55 +5,55 @@ namespace ReliableUdp.Utility
 {
     public class UdpDataReader
 	{
-		protected byte[] _data;
-		protected int _position;
+		protected byte[] data;
+		protected int position;
 		protected int DataSize;
 
 		public byte[] Data
 		{
-			get { return this._data; }
+			get { return this.data; }
 		}
 
 		public int Position
 		{
-			get { return this._position; }
+			get { return this.position; }
 		}
 
 		public bool EndOfData
 		{
-			get { return this._position == this.DataSize; }
+			get { return this.position == this.DataSize; }
 		}
 
 		public int AvailableBytes
 		{
-			get { return this.DataSize - this._position; }
+			get { return this.DataSize - this.position; }
 		}
 
 		public void SetSource(UdpDataWriter dataWriter)
 		{
-			this._data = dataWriter.Data;
-			this._position = 0;
+			this.data = dataWriter.Data;
+			this.position = 0;
 			this.DataSize = dataWriter.Length;
 		}
 
 		public void SetSource(byte[] source)
 		{
-			this._data = source;
-			this._position = 0;
+			this.data = source;
+			this.position = 0;
 			this.DataSize = source.Length;
 		}
 
 		public void SetSource(byte[] source, int offset)
 		{
-			this._data = source;
-			this._position = offset;
-			this.DataSize = source.Length;
+			this.data = source;
+			this.position = offset;
+			this.DataSize = source.Length - offset;
 		}
 
 		public void SetSource(byte[] source, int offset, int dataSize)
 		{
-			this._data = source;
-			this._position = offset;
+			this.data = source;
+			this.position = offset;
 			this.DataSize = dataSize;
 		}
 
@@ -67,47 +67,40 @@ namespace ReliableUdp.Utility
 			this.SetSource(source);
 		}
 
-		public UdpDataReader(byte[] source, int offset)
+		public UdpDataReader(byte[] source, int position)
 		{
-			this.SetSource(source, offset);
+			this.SetSource(source, position);
 		}
 
-		public UdpDataReader(byte[] source, int offset, int maxSize)
+		public UdpDataReader(byte[] source, int position, int datasize)
 		{
-			this.SetSource(source, offset, maxSize);
-		}
-
-		public UdpEndPoint GetUdpEndPoint()
-		{
-			string host = this.GetString(1000);
-			int port = this.GetInt();
-			return new UdpEndPoint(host, port);
+			this.SetSource(source, position, datasize);
 		}
 
 		public byte GetByte()
 		{
-			byte res = this._data[this._position];
-			this._position += 1;
+			byte res = this.data[this.position];
+			this.position += 1;
 			return res;
 		}
 
 		public byte PeekByte()
 		{
-			byte res = this._data[this._position];
+			byte res = this.data[this.position];
 			return res;
 		}
 
 		public sbyte GetSByte()
 		{
-			var b = (sbyte)this._data[this._position];
-			this._position++;
+			var b = (sbyte)this.data[this.position];
+			this.position++;
 			return b;
 		}
 
 		public bool[] GetBoolArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new bool[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -118,8 +111,8 @@ namespace ReliableUdp.Utility
 
 		public ushort[] GetUShortArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new ushort[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -130,8 +123,8 @@ namespace ReliableUdp.Utility
 
 		public short[] GetShortArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new short[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -142,8 +135,8 @@ namespace ReliableUdp.Utility
 
 		public long[] GetLongArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new long[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -154,8 +147,8 @@ namespace ReliableUdp.Utility
 
 		public ulong[] GetULongArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new ulong[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -166,8 +159,8 @@ namespace ReliableUdp.Utility
 
 		public int[] GetIntArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new int[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -178,8 +171,8 @@ namespace ReliableUdp.Utility
 
 		public uint[] GetUIntArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new uint[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -190,8 +183,8 @@ namespace ReliableUdp.Utility
 
 		public float[] GetFloatArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new float[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -202,8 +195,8 @@ namespace ReliableUdp.Utility
 
 		public double[] GetDoubleArray()
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new double[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -214,8 +207,8 @@ namespace ReliableUdp.Utility
 
 		public string[] GetStringArray(int maxLength)
 		{
-			ushort size = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort size = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			var arr = new string[size];
 			for (int i = 0; i < size; i++)
 			{
@@ -226,64 +219,64 @@ namespace ReliableUdp.Utility
 
 		public bool GetBool()
 		{
-			bool res = this._data[this._position] > 0;
-			this._position += 1;
+			bool res = this.data[this.position] > 0;
+			this.position += 1;
 			return res;
 		}
 
 		public ushort GetUShort()
 		{
-			ushort result = BitConverter.ToUInt16(this._data, this._position);
-			this._position += 2;
+			ushort result = BitConverter.ToUInt16(this.data, this.position);
+			this.position += 2;
 			return result;
 		}
 
 		public short GetShort()
 		{
-			short result = BitConverter.ToInt16(this._data, this._position);
-			this._position += 2;
+			short result = BitConverter.ToInt16(this.data, this.position);
+			this.position += 2;
 			return result;
 		}
 
 		public long GetLong()
 		{
-			long result = BitConverter.ToInt64(this._data, this._position);
-			this._position += 8;
+			long result = BitConverter.ToInt64(this.data, this.position);
+			this.position += 8;
 			return result;
 		}
 
 		public ulong GetULong()
 		{
-			ulong result = BitConverter.ToUInt64(this._data, this._position);
-			this._position += 8;
+			ulong result = BitConverter.ToUInt64(this.data, this.position);
+			this.position += 8;
 			return result;
 		}
 
 		public int GetInt()
 		{
-			int result = BitConverter.ToInt32(this._data, this._position);
-			this._position += 4;
+			int result = BitConverter.ToInt32(this.data, this.position);
+			this.position += 4;
 			return result;
 		}
 
 		public uint GetUInt()
 		{
-			uint result = BitConverter.ToUInt32(this._data, this._position);
-			this._position += 4;
+			uint result = BitConverter.ToUInt32(this.data, this.position);
+			this.position += 4;
 			return result;
 		}
 
 		public float GetFloat()
 		{
-			float result = BitConverter.ToSingle(this._data, this._position);
-			this._position += 4;
+			float result = BitConverter.ToSingle(this.data, this.position);
+			this.position += 4;
 			return result;
 		}
 
 		public double GetDouble()
 		{
-			double result = BitConverter.ToDouble(this._data, this._position);
-			this._position += 8;
+			double result = BitConverter.ToDouble(this.data, this.position);
+			this.position += 8;
 			return result;
 		}
 
@@ -295,14 +288,14 @@ namespace ReliableUdp.Utility
 				return string.Empty;
 			}
 
-			int charCount = Encoding.UTF8.GetCharCount(this._data, this._position, bytesCount);
+			int charCount = Encoding.UTF8.GetCharCount(this.data, this.position, bytesCount);
 			if (charCount > maxLength)
 			{
 				return string.Empty;
 			}
 
-			string result = Encoding.UTF8.GetString(this._data, this._position, bytesCount);
-			this._position += bytesCount;
+			string result = Encoding.UTF8.GetString(this.data, this.position, bytesCount);
+			this.position += bytesCount;
 			return result;
 		}
 
@@ -310,36 +303,41 @@ namespace ReliableUdp.Utility
 		{
 			int bytesCount = this.GetInt();
 
-			string result = Encoding.UTF8.GetString(this._data, this._position, bytesCount);
-			this._position += bytesCount;
+			string result = Encoding.UTF8.GetString(this.data, this.position, bytesCount);
+			this.position += bytesCount;
 			return result;
 		}
 
 		public byte[] GetBytes()
 		{
 			byte[] outgoingData = new byte[this.AvailableBytes];
-			Buffer.BlockCopy(this._data, this._position, outgoingData, 0, this.AvailableBytes);
-			this._position = this._data.Length;
+			Buffer.BlockCopy(this.data, this.position, outgoingData, 0, this.AvailableBytes);
+			this.position = this.data.Length;
 			return outgoingData;
 		}
 
 		public void GetBytes(byte[] destination)
 		{
-			Buffer.BlockCopy(this._data, this._position, destination, 0, this.AvailableBytes);
-			this._position = this._data.Length;
+			Buffer.BlockCopy(this.data, this.position, destination, 0, this.AvailableBytes);
+			this.position = this.data.Length;
 		}
 
 		public void GetBytes(byte[] destination, int lenght)
 		{
-			Buffer.BlockCopy(this._data, this._position, destination, 0, lenght);
-			this._position += lenght;
+			Buffer.BlockCopy(this.data, this.position, destination, 0, lenght);
+			this.position += lenght;
 		}
 
 		public void Clear()
 		{
-			this._position = 0;
+			this.position = 0;
 			this.DataSize = 0;
-			this._data = null;
+			this.data = null;
 		}
+
+        public UdpDataReader CloneWithoutCopy()
+        {
+            return new UdpDataReader(data, this.position, this.DataSize);
+        }
 	}
 }

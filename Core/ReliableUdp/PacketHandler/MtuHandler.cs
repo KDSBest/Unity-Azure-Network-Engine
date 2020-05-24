@@ -1,98 +1,108 @@
 ﻿
+using ReliableUdp.BitUtility;
 using ReliableUdp.Const;
 using ReliableUdp.Enums;
 using ReliableUdp.Packet;
+using System;
+using System.Diagnostics;
 
 namespace ReliableUdp.PacketHandler
 {
     public class MtuHandler
-	{
+    {
         private int mtuIdx;
-		private bool finishMtu;
-		private int mtuCheckTimer;
-		private int mtuCheckAttempts;
-		private const int MTU_CHECK_DELAY = 1000;
-		private const int MAX_MTU_CHECK_ATTEMPTS = 4;
-		private readonly object lockObject = new object();
+        private bool finishMtu;
+        private int mtuCheckTimer;
+        private int mtuCheckAttempts;
+        private const int MTU_CHECK_DELAY = 1000;
+        private const int MAX_MTU_CHECK_ATTEMPTS = 4;
+        private readonly object lockObject = new object();
 
         public int Mtu { get; private set; } = Const.Mtu.PossibleValues[0];
 
         public MtuHandler()
-		{
-		}
+        {
+        }
 
-		public void ProcessMtuPacket(UdpPeer peer, UdpPacket packet)
-		{
-			if (packet.Size == 1 ||
-					 packet.RawData[1] >= Const.Mtu.PossibleValues.Length)
-				return;
+        public void ProcessMtuPacket(UdpPeer peer, UdpPacket packet)
+        {
+            if (packet.Size == 5 || packet.RawData[1] >= Const.Mtu.PossibleValues.Length)
+                return;
 
-			if (packet.Type == PacketType.MtuCheck)
-			{
-				if (packet.Size != Const.Mtu.PossibleValues[packet.RawData[1]])
-				{
-					return;
-				}
-				this.mtuCheckAttempts = 0;
+            int recvMtu = BitConverter.ToInt32(packet.RawData, 1);
+            int endMtuCheck = BitConverter.ToInt32(packet.RawData, packet.Size - 4);
+            if (packet.Size != recvMtu || recvMtu != endMtuCheck || recvMtu > Const.Mtu.MaxPacketSize)
+            {
+                Debug.WriteLine($"Corrupted MTU Package Recv MTU: {recvMtu} End MTU: {endMtuCheck} Packet Size: {packet.Size}");
+                return;
+            }
 
-				System.Diagnostics.Debug.WriteLine($"MTU check. Resend {packet.RawData[1]}");
-				var mtuOkPacket = peer.GetPacketFromPool(PacketType.MtuOk, 1);
-				mtuOkPacket.RawData[1] = packet.RawData[1];
-				peer.SendPacket(mtuOkPacket);
-			}
-			else if (packet.RawData[1] > this.mtuIdx)
-			{
-				lock (this.lockObject)
-				{
-					this.mtuIdx = packet.RawData[1];
-					this.Mtu = Const.Mtu.PossibleValues[this.mtuIdx];
-				}
+            if (packet.Type == PacketType.MtuCheck)
+            {
+                this.mtuCheckAttempts = 0;
 
-				if (this.mtuIdx == Const.Mtu.PossibleValues.Length - 1)
-				{
-					this.finishMtu = true;
-				}
+                Debug.WriteLine($"MTU check. Resend {packet.RawData[1]}");
+                packet.Type = PacketType.MtuOk;
+                peer.SendPacket(packet);
+            }
+            else if (recvMtu > Mtu && !finishMtu)
+            {
+                if (recvMtu != Const.Mtu.PossibleValues[mtuIdx + 1])
+                    return;
 
-				System.Diagnostics.Debug.WriteLine($"MTU is set to {this.Mtu}");
-			}
-		}
+                lock (this.lockObject)
+                {
+                    this.mtuIdx++;
+                    this.Mtu = recvMtu;
+                }
 
-		public void Update(UdpPeer peer, int deltaTime)
-		{
-			if (!this.finishMtu)
-			{
-				this.mtuCheckTimer += deltaTime;
-				if (this.mtuCheckTimer >= MTU_CHECK_DELAY)
-				{
-					this.mtuCheckTimer = 0;
-					this.mtuCheckAttempts++;
-					if (this.mtuCheckAttempts >= MAX_MTU_CHECK_ATTEMPTS)
-					{
-						this.finishMtu = true;
-					}
-					else
-					{
-						lock (this.lockObject)
-						{
-							if (this.mtuIdx < Const.Mtu.PossibleValues.Length - 1)
-							{
-								int newMtu = Const.Mtu.PossibleValues[this.mtuIdx + 1] - HeaderSize.DEFAULT;
-								var p = peer.GetPacketFromPool(PacketType.MtuCheck, newMtu);
-								p.RawData[1] = (byte)(this.mtuIdx + 1);
-								peer.SendPacket(p);
-							}
-						}
-					}
-				}
-			}
-		}
+                if (this.mtuIdx == Const.Mtu.PossibleValues.Length - 1)
+                    this.finishMtu = true;
 
-		public void SendPacket(UdpPeer peer, UdpPacket packet)
-		{
-			if (!peer.SendRawAndRecycle(packet, peer.EndPoint))
-			{
-				this.finishMtu = true;
-			}
-		}
-	}
+                Debug.WriteLine($"MTU is set to {this.Mtu}");
+            }
+        }
+
+        public void Update(UdpPeer peer, int deltaTime)
+        {
+            if (this.finishMtu)
+                return;
+
+            this.mtuCheckTimer += deltaTime;
+            if (this.mtuCheckTimer < MTU_CHECK_DELAY)
+                return;
+
+            this.mtuCheckTimer = 0;
+            this.mtuCheckAttempts++;
+            if (this.mtuCheckAttempts >= MAX_MTU_CHECK_ATTEMPTS)
+            {
+                this.finishMtu = true;
+                return;
+            }
+
+            lock (this.lockObject)
+            {
+                if (this.mtuIdx >= Const.Mtu.PossibleValues.Length - 1)
+                    return;
+
+                int newMtu = Const.Mtu.PossibleValues[this.mtuIdx + 1];
+                var p = peer.GetPacketFromPool(PacketType.MtuCheck, newMtu - HeaderSize.DEFAULT);
+                BitHelper.Write(p.RawData, 1, newMtu);
+                BitHelper.Write(p.RawData, p.Size - 4, newMtu);
+
+                this.SendPacket(peer, p);
+            }
+        }
+
+        public bool SendPacket(UdpPeer peer, UdpPacket packet)
+        {
+            bool result = peer.SendRawAndRecycle(packet, peer.EndPoint);
+            if (!result)
+            {
+                this.finishMtu = true;
+            }
+
+            return result;
+        }
+    }
 }

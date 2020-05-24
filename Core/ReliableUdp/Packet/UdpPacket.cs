@@ -21,8 +21,8 @@ namespace ReliableUdp.Packet
 
 		public SequenceNumber Sequence
 		{
-			get { return new SequenceNumber(System.BitConverter.ToUInt16(this.RawData, 1)); }
-			set { BitHelper.GetBytes(this.RawData, 1, (ushort)value.Value); }
+			get { return new SequenceNumber(BitConverter.ToUInt16(this.RawData, 1)); }
+			set { BitHelper.Write(this.RawData, 1, (ushort)value.Value); }
 		}
 
 		public bool IsFragmented
@@ -39,20 +39,20 @@ namespace ReliableUdp.Packet
 
 		public ushort FragmentId
 		{
-			get { return System.BitConverter.ToUInt16(this.RawData, 3); }
-			set { BitHelper.GetBytes(this.RawData, 3, value); }
+			get { return BitConverter.ToUInt16(this.RawData, 3); }
+			set { BitHelper.Write(this.RawData, 3, value); }
 		}
 
 		public ushort FragmentPart
 		{
-			get { return System.BitConverter.ToUInt16(this.RawData, 5); }
-			set { BitHelper.GetBytes(this.RawData, 5, value); }
+			get { return BitConverter.ToUInt16(this.RawData, 5); }
+			set { BitHelper.Write(this.RawData, 5, value); }
 		}
 
 		public ushort FragmentsTotal
 		{
-			get { return System.BitConverter.ToUInt16(this.RawData, 7); }
-			set { BitHelper.GetBytes(this.RawData, 7, value); }
+			get { return BitConverter.ToUInt16(this.RawData, 7); }
+			set { BitHelper.Write(this.RawData, 7, value); }
 		}
 
 		public readonly byte[] RawData;
@@ -64,14 +64,32 @@ namespace ReliableUdp.Packet
 			this.Size = 0;
 		}
 
-		public static int GetHeaderSize(PacketType type)
-		{
-			return IsSequenced(type)
-				 ? HeaderSize.SEQUENCED
-				 : HeaderSize.DEFAULT;
-		}
+        public UdpPacket(PacketType type, int size)
+        {
+            size += GetHeaderSize(type);
+            this.RawData = new byte[size];
+            this.Type = type;
+            this.Size = size;
+        }
 
-		public int GetHeaderSize()
+        public static int GetHeaderSize(PacketType type)
+		{
+            switch (type)
+            {
+                case PacketType.ReliableOrdered:
+                case PacketType.Reliable:
+                case PacketType.UnreliableOrdered:
+                case PacketType.Ping:
+                case PacketType.Pong:
+                case PacketType.AckReliable:
+                case PacketType.AckReliableOrdered:
+                    return HeaderSize.SEQUENCED;
+            }
+
+            return HeaderSize.DEFAULT;
+        }
+
+        public int GetHeaderSize()
 		{
 			return GetHeaderSize(this.Type);
 		}
@@ -83,17 +101,6 @@ namespace ReliableUdp.Packet
 			byte[] data = new byte[dataSize];
 			Buffer.BlockCopy(this.RawData, headerSize, data, 0, dataSize);
 			return data;
-		}
-
-		public static bool IsSequenced(PacketType type)
-		{
-			return type == PacketType.ReliableOrdered ||
-				 type == PacketType.Reliable ||
-				 type == PacketType.UnreliableOrdered ||
-				 type == PacketType.Ping ||
-				 type == PacketType.Pong ||
-				 type == PacketType.AckReliable ||
-				 type == PacketType.AckReliableOrdered;
 		}
 
 		public bool FromBytes(byte[] data, int start, int packetSize)
@@ -114,6 +121,6 @@ namespace ReliableUdp.Packet
 			this.Size = packetSize;
 			return true;
 		}
-	}
+    }
 
 }

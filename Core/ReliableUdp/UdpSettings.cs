@@ -4,7 +4,7 @@ namespace ReliableUdp
 {
 	public class UdpSettings
 	{
-		public long DisconnectTimeout = 5000;
+		public int DisconnectTimeout = 5000;
 
 		public int ReconnectDelay = 500;
 

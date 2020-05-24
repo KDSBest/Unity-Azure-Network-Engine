@@ -9,7 +9,7 @@ namespace ReliableUdp.PacketHandler
 {
     public class ConnectionRequestHandler
 	{
-		public const int PROTOCOL_ID = 1;
+		public const int PROTOCOL_ID = 2;
 
 		private int connectAttempts;
 		private int connectTimer;
@@ -46,8 +46,8 @@ namespace ReliableUdp.PacketHandler
 
 			var connectPacket = peer.GetPacketFromPool(PacketType.ConnectRequest, 12 + keyData.Length);
 
-			BitHelper.GetBytes(connectPacket.RawData, 1, PROTOCOL_ID);
-			BitHelper.GetBytes(connectPacket.RawData, 5, this.ConnectId);
+			BitHelper.Write(connectPacket.RawData, 1, PROTOCOL_ID);
+			BitHelper.Write(connectPacket.RawData, 5, this.ConnectId);
 			Buffer.BlockCopy(keyData, 0, connectPacket.RawData, 13, keyData.Length);
 
 			peer.SendRawAndRecycle(connectPacket, peer.EndPoint);
@@ -58,7 +58,7 @@ namespace ReliableUdp.PacketHandler
 			peer.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 
 			var connectPacket = peer.GetPacketFromPool(PacketType.ConnectAccept, 8);
-			BitHelper.GetBytes(connectPacket.RawData, 1, this.ConnectId);
+			BitHelper.Write(connectPacket.RawData, 1, this.ConnectId);
 			peer.SendRawAndRecycle(connectPacket, peer.EndPoint);
 		}
 
@@ -80,7 +80,7 @@ namespace ReliableUdp.PacketHandler
 
 		public void ProcessPacket(UdpPeer peer, UdpPacket packet)
 		{
-			long newId = BitConverter.ToInt64(packet.RawData, 1);
+			long newId = BitConverter.ToInt64(packet.RawData, 5);
 			if (newId > this.ConnectId)
 			{
 				this.ConnectId = newId;

@@ -4,7 +4,7 @@
 	{
 		public const ushort MAX_SEQUENCE = 32768;
 		public const ushort MAX_SEQUENCE_HALF = MAX_SEQUENCE / 2;
-
+        
 		public int Value { get; set; }
 
 		public bool IsValid

@@ -15,6 +15,9 @@ namespace ReliableUdp
 	{
         private readonly UdpPacketPool packetPool;
 		private readonly object flushLock = new object();
+        private readonly object sendLock = new object();
+
+        public int MaxFlushPacketCount = 1000;
 
 		public UdpEndPoint EndPoint { get; private set; }
 
@@ -107,17 +110,20 @@ namespace ReliableUdp
 
 		public void Send(byte[] data, int start, int length, ChannelType options)
 		{
-			PacketType type = SendOptionsToProperty(options);
-			int headerSize = UdpPacket.GetHeaderSize(type);
+            lock (sendLock)
+            {
+                PacketType type = SendOptionsToProperty(options);
+                int headerSize = UdpPacket.GetHeaderSize(type);
 
-			if (length + headerSize > this.PacketMtuHandler.Mtu)
-			{
-				this.PacketFragmentHandler.Send(this, data, start, length, options, headerSize, type);
-				return;
-			}
+                if (length + headerSize > this.PacketMtuHandler.Mtu)
+                {
+                    this.PacketFragmentHandler.Send(this, data, start, length, options, headerSize, type);
+                    return;
+                }
 
-			UdpPacket packet = this.packetPool.GetWithData(type, data, start, length);
-			this.SendPacket(packet);
+                UdpPacket packet = this.packetPool.GetWithData(type, data, start, length);
+                this.SendPacket(packet);
+            }
 		}
 
 		public void CreateAndSend(PacketType type, SequenceNumber sequence)
@@ -127,8 +133,9 @@ namespace ReliableUdp
 			this.SendPacket(packet);
 		}
 
-		public void SendPacket(UdpPacket packet)
+		public bool SendPacket(UdpPacket packet)
 		{
+            bool result = true;
 			System.Diagnostics.Debug.WriteLine($"Packet type {packet.Type}");
 			switch (packet.Type)
 			{
@@ -145,7 +152,7 @@ namespace ReliableUdp
 					this.Channels[ChannelType.ReliableOrdered].AddToQueue(packet);
 					break;
 				case PacketType.MtuCheck:
-					this.PacketMtuHandler.SendPacket(this, packet);
+					result = this.PacketMtuHandler.SendPacket(this, packet);
 					break;
 				case PacketType.AckReliable:
 				case PacketType.AckReliableOrdered:
@@ -153,12 +160,14 @@ namespace ReliableUdp
 				case PacketType.Pong:
 				case PacketType.Disconnect:
 				case PacketType.MtuOk:
-					this.SendRawData(packet);
+					result = this.SendRawData(packet);
 					this.packetPool.Recycle(packet);
 					break;
 				default:
 					throw new Exception("Unknown packet type: " + packet.Type);
 			}
+
+            return result;
 		}
 
 		public void AddIncomingAck(UdpPacket p, ChannelType channel)
@@ -240,15 +249,15 @@ namespace ReliableUdp
 			}
 		}
 
-		public void SendRawData(UdpPacket packet)
+		public bool SendRawData(UdpPacket packet)
 		{
 			if (this.PacketMergeHandler.SendRawData(this, packet))
 			{
-				return;
+				return true;
 			}
 
 			System.Diagnostics.Debug.WriteLine($"Sending Packet {packet.Type}");
-			this.UdpManager.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint);
+			return this.UdpManager.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint);
 		}
 
 		public bool SendRaw(byte[] message, int start, int length, UdpEndPoint endPoint)
@@ -256,36 +265,31 @@ namespace ReliableUdp
 			return this.UdpManager.SendRaw(message, start, length, endPoint);
 		}
 
-		private void SendQueuedPackets(int currentMaxSend)
-		{
-			int currentSended = 0;
-			while (currentSended < currentMaxSend)
-			{
-				if (this.Channels[ChannelType.ReliableOrdered].SendNextPacket() ||
-					 this.Channels[ChannelType.Reliable].SendNextPacket() ||
-					 this.Channels[ChannelType.UnreliableOrdered].SendNextPacket() ||
-					 this.Channels[ChannelType.Unreliable].SendNextPacket())
-				{
-					currentSended++;
-				}
-				else
-				{
-					break;
-				}
-			}
-
-			this.NetworkStatisticManagement.FlowManagement.IncreaseSendedPacketCount(currentSended);
-
-			this.PacketMergeHandler.SendQueuedPackets(this);
-		}
-
 		public void Flush()
 		{
 			lock (this.flushLock)
 			{
-				this.SendQueuedPackets(int.MaxValue);
-			}
-		}
+                int currentSended = 0;
+                while (currentSended < MaxFlushPacketCount)
+                {
+                    if (this.Channels[ChannelType.ReliableOrdered].SendNextPacket() ||
+                         this.Channels[ChannelType.Reliable].SendNextPacket() ||
+                         this.Channels[ChannelType.UnreliableOrdered].SendNextPacket() ||
+                         this.Channels[ChannelType.Unreliable].SendNextPacket())
+                    {
+                        currentSended++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                this.NetworkStatisticManagement.FlowManagement.IncreaseSendedPacketCount(currentSended);
+
+                this.PacketMergeHandler.SendQueuedPackets(this);
+            }
+        }
 
 		public void Update(int deltaTime)
 		{
@@ -304,10 +308,7 @@ namespace ReliableUdp
 
 			this.PacketMtuHandler.Update(this, deltaTime);
 
-			lock (this.flushLock)
-			{
-				this.SendQueuedPackets(currentMaxSend);
-			}
+            this.Flush();
 		}
 
 		public void Recycle(UdpPacket packet)

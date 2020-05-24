@@ -2,7 +2,7 @@ namespace ReliableUdp.BitUtility
 {
 	public static class BitHelper
 	{
-		private static void WriteLittleEndian(byte[] buffer, int offset, ulong data)
+		private static void WriteEndian(byte[] buffer, int offset, ulong data)
 		{
 #if BIGENDIAN
             buffer[offset + 7] = (byte)(data);
@@ -25,7 +25,7 @@ namespace ReliableUdp.BitUtility
 #endif
 		}
 
-		private static void WriteLittleEndian(byte[] buffer, int offset, int data)
+		private static void WriteEndian(byte[] buffer, int offset, int data)
 		{
 #if BIGENDIAN
             buffer[offset + 3] = (byte)(data);
@@ -40,7 +40,7 @@ namespace ReliableUdp.BitUtility
 #endif
 		}
 
-		public static void WriteLittleEndian(byte[] buffer, int offset, short data)
+		public static void WriteEndian(byte[] buffer, int offset, short data)
 		{
 #if BIGENDIAN
             buffer[offset + 1] = (byte)(data);
@@ -51,46 +51,46 @@ namespace ReliableUdp.BitUtility
 #endif
 		}
 
-		public static void GetBytes(byte[] bytes, int startIndex, double value)
+		public static void Write(byte[] bytes, int startIndex, double value)
 		{
 			ConverterHelperDouble ch = new ConverterHelperDouble { Adouble = value };
-			WriteLittleEndian(bytes, startIndex, ch.Along);
+			WriteEndian(bytes, startIndex, ch.Along);
 		}
 
-		public static void GetBytes(byte[] bytes, int startIndex, float value)
+		public static void Write(byte[] bytes, int startIndex, float value)
 		{
 			ConverterHelperFloat ch = new ConverterHelperFloat { Afloat = value };
-			WriteLittleEndian(bytes, startIndex, ch.Aint);
+			WriteEndian(bytes, startIndex, ch.Aint);
 		}
 
-		public static void GetBytes(byte[] bytes, int startIndex, short value)
+		public static void Write(byte[] bytes, int startIndex, short value)
 		{
-			WriteLittleEndian(bytes, startIndex, value);
+			WriteEndian(bytes, startIndex, value);
 		}
 
-		public static void GetBytes(byte[] bytes, int startIndex, ushort value)
+		public static void Write(byte[] bytes, int startIndex, ushort value)
 		{
-			WriteLittleEndian(bytes, startIndex, (short)value);
+			WriteEndian(bytes, startIndex, (short)value);
 		}
 
-		public static void GetBytes(byte[] bytes, int startIndex, int value)
+		public static void Write(byte[] bytes, int startIndex, int value)
 		{
-			WriteLittleEndian(bytes, startIndex, value);
+			WriteEndian(bytes, startIndex, value);
 		}
 
-		public static void GetBytes(byte[] bytes, int startIndex, uint value)
+		public static void Write(byte[] bytes, int startIndex, uint value)
 		{
-			WriteLittleEndian(bytes, startIndex, (int)value);
+			WriteEndian(bytes, startIndex, (int)value);
 		}
 
-		public static void GetBytes(byte[] bytes, int startIndex, long value)
+		public static void Write(byte[] bytes, int startIndex, long value)
 		{
-			WriteLittleEndian(bytes, startIndex, (ulong)value);
+			WriteEndian(bytes, startIndex, (ulong)value);
 		}
 
-		public static void GetBytes(byte[] bytes, int startIndex, ulong value)
+		public static void Write(byte[] bytes, int startIndex, ulong value)
 		{
-			WriteLittleEndian(bytes, startIndex, value);
+			WriteEndian(bytes, startIndex, value);
 		}
 	}
 }

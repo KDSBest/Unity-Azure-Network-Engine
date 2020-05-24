@@ -28,7 +28,7 @@ namespace ReliableUdp.Channel
             if(!this.outgoingPackets.TryDequeue(out packet))
 				return false;
 
-			this.localSequence.Value++;
+			this.localSequence++;
 			packet.Sequence = new SequenceNumber(this.localSequence.Value);
 			this.peer.SendRawData(packet);
 			this.peer.Recycle(packet);

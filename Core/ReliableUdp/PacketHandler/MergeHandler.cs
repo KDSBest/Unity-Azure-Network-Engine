@@ -36,7 +36,7 @@ namespace ReliableUdp.PacketHandler
 
 		public void Initialize(UdpPeer peer)
 		{
-			this.mergeData = peer.GetPacketFromPool(PacketType.Merged, Const.Mtu.MaxPacketSize);
+			this.mergeData = peer.GetPacketFromPool(PacketType.Merged, Mtu.MaxPacketSize);
 		}
 
 		public bool SendRawData(UdpPeer peer, UdpPacket packet)
@@ -45,7 +45,7 @@ namespace ReliableUdp.PacketHandler
 				 CanMerge(packet.Type) &&
 				 this.mergePos + packet.Size + HeaderSize.DEFAULT * 2 + 2 < peer.PacketMtuHandler.Mtu)
 			{
-				BitHelper.GetBytes(this.mergeData.RawData, this.mergePos + HeaderSize.DEFAULT, (ushort)packet.Size);
+				BitHelper.Write(this.mergeData.RawData, this.mergePos + HeaderSize.DEFAULT, (ushort)packet.Size);
 				Buffer.BlockCopy(packet.RawData, 0, this.mergeData.RawData, this.mergePos + HeaderSize.DEFAULT + 2, packet.Size);
 				this.mergePos += packet.Size + 2;
 				this.mergeCount++;

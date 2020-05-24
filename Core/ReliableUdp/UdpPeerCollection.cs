@@ -57,7 +57,7 @@ namespace ReliableUdp
             this.idPeersDict.Add(peer.ConnectId, peer);
         }
 
-		public bool ContainsAddress(UdpEndPoint endPoint)
+		public bool Contains(UdpEndPoint endPoint)
 		{
 			return this.peersDict.ContainsKey(endPoint);
 		}

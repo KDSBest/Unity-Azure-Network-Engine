@@ -36,34 +36,42 @@ namespace ReliableUdp
 		}
 
 		public UdpEndPoint(string hostStr, int port)
-		{
-			IPAddress ipAddress;
-			if (!IPAddress.TryParse(hostStr, out ipAddress))
-			{
-				if (Socket.OSSupportsIPv6)
-				{
-					if (hostStr == "localhost")
-					{
-						ipAddress = IPAddress.IPv6Loopback;
-					}
-					else
-					{
-						ipAddress = ResolveAddress(hostStr, AddressFamily.InterNetworkV6);
-					}
-				}
-				if (ipAddress == null)
-				{
-					ipAddress = ResolveAddress(hostStr, AddressFamily.InterNetwork);
-				}
-			}
-			if (ipAddress == null)
-			{
-				throw new Exception("Invalid address: " + hostStr);
-			}
-			EndPoint = new IPEndPoint(ipAddress, port);
-		}
+        {
+            IPAddress ipAddress = ResolveHostname(hostStr, true);
+            EndPoint = new IPEndPoint(ipAddress, port);
+        }
 
-		private IPAddress ResolveAddress(string hostStr, AddressFamily addressFamily)
+        public static IPAddress ResolveHostname(string hostStr, bool ipv6)
+        {
+            IPAddress ipAddress;
+            if (!IPAddress.TryParse(hostStr, out ipAddress))
+            {
+                if (ipv6 && Socket.OSSupportsIPv6)
+                {
+                    if (hostStr == "localhost")
+                    {
+                        ipAddress = IPAddress.IPv6Loopback;
+                    }
+                    else
+                    {
+                        ipAddress = ResolveAddress(hostStr, AddressFamily.InterNetworkV6);
+                    }
+                }
+                if (ipAddress == null)
+                {
+                    ipAddress = ResolveAddress(hostStr, AddressFamily.InterNetwork);
+                }
+            }
+
+            if (ipAddress == null)
+            {
+                throw new Exception("Invalid address: " + hostStr);
+            }
+
+            return ipAddress;
+        }
+
+        private static IPAddress ResolveAddress(string hostStr, AddressFamily addressFamily)
 		{
 			var host = Dns.GetHostEntry(hostStr);
 
@@ -75,36 +83,6 @@ namespace ReliableUdp
 				}
 			}
 			return null;
-		}
-
-		public long GetId()
-		{
-			byte[] addr = EndPoint.Address.GetAddressBytes();
-			long id = 0;
-
-			if (addr.Length == 4) //IPv4
-			{
-				id = addr[0];
-				id |= (long)addr[1] << 8;
-				id |= (long)addr[2] << 16;
-				id |= (long)addr[3] << 24;
-				id |= (long)EndPoint.Port << 32;
-			}
-			else if (addr.Length == 16) //IPv6
-			{
-				id = addr[0] ^ addr[8];
-				id |= (long)(addr[1] ^ addr[9]) << 8;
-				id |= (long)(addr[2] ^ addr[10]) << 16;
-
-
-				id |= (long)(addr[3] ^ addr[11]) << 24;
-				id |= (long)(addr[4] ^ addr[12]) << 32;
-				id |= (long)(addr[5] ^ addr[13]) << 40;
-				id |= (long)(addr[6] ^ addr[14]) << 48;
-				id |= (long)(Port ^ addr[7] ^ addr[15]) << 56;
-			}
-
-			return id;
 		}
 	}
 

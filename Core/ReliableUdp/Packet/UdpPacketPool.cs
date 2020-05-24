@@ -9,6 +9,7 @@ namespace ReliableUdp.Packet
 {
 	public class UdpPacketPool
 	{
+        public int PoolLimit = 1000;
 		private readonly Stack<UdpPacket> pool;
 
 		public UdpPacketPool()
@@ -90,7 +91,8 @@ namespace ReliableUdp.Packet
 			packet.IsFragmented = false;
 			lock (this.pool)
 			{
-				this.pool.Push(packet);
+                if(this.pool.Count < PoolLimit)
+    				this.pool.Push(packet);
 			}
 		}
 	}
