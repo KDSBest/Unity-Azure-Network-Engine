@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using ReliableUdp.Enums;
 using ReliableUdp.Packet;
 using ReliableUdp.Utility;
