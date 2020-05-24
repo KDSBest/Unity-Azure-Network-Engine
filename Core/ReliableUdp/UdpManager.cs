@@ -312,13 +312,10 @@ namespace ReliableUdp
                     return;
                 }
 
-                //Getting new id for peer
                 long connectionId = BitConverter.ToInt64(packet.RawData, 5);
-                //response with id
                 udpPeer = new UdpPeer(this, remoteEndPoint, connectionId);
                 System.Diagnostics.Debug.WriteLine($"Received Peer connect request Id {udpPeer.ConnectId} EP {remoteEndPoint}.");
 
-                //clean incoming packet
                 this.PacketPool.Recycle(packet);
 
                 this.peers.Add(remoteEndPoint, udpPeer);
@@ -829,7 +826,6 @@ namespace ReliableUdp
                     break;
             }
 
-            //Recycle
             evt.DataReader.Clear();
             evt.Peer = null;
             evt.AdditionalData = 0;
