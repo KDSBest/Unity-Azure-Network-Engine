@@ -13,7 +13,6 @@ namespace ReliableUdp.Packet
         public const byte FRAGMENTED_BIT = 0x80;
         public const byte PACKET_TYPE_MASK = 0x7F;
 
-		//Header
 		public PacketType Type
 		{
 			get { return (PacketType)(this.RawData[0] & PACKET_TYPE_MASK); }
@@ -99,7 +98,6 @@ namespace ReliableUdp.Packet
 
 		public bool FromBytes(byte[] data, int start, int packetSize)
 		{
-			//Reading type
 			byte property = (byte)(data[start] & PACKET_TYPE_MASK);
 			bool fragmented = (data[start] & FRAGMENTED_BIT) != 0;
 			int headerSize = GetHeaderSize((PacketType)property);

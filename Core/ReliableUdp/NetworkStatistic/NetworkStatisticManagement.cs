@@ -27,7 +27,7 @@ namespace ReliableUdp.NetworkStatistic
 		{
 			this.FlowManagement = new FlowManagement();
 
-			// we start with an avgRtt because we don't want to have a resent delay of 0
+			// NOTE: we start with an avgRtt because we don't want to have a resent delay of 0
 			this.avgRtt = 27;
 			this.rtt = 0;
 		}
@@ -39,19 +39,14 @@ namespace ReliableUdp.NetworkStatistic
 
 		public void UpdateRoundTripTime(int roundTripTime)
 		{
-			//Calc average round trip time
 			this.rtt += roundTripTime;
 			this.rttCount++;
 			this.avgRtt = this.rtt / this.rttCount;
-
-			//flowmode 0 = fastest
-			//flowmode max = lowest
 
 			if (this.avgRtt < this.FlowManagement.GetStartRtt(this.FlowManagement.CurrentFlowMode - 1))
 			{
 				if (this.FlowManagement.CurrentFlowMode <= 0)
 				{
-					//Already maxed
 					return;
 				}
 
@@ -74,10 +69,8 @@ namespace ReliableUdp.NetworkStatistic
 				}
 			}
 
-			//recalc resend delay
-			double avgRtt = this.avgRtt;
-			if (avgRtt <= 0.0)
-				avgRtt = 0.1;
+            if (this.avgRtt <= 0)
+                this.avgRtt = 1;
 		}
 
 		public void Update(UdpPeer peer, int deltaTime, Action<UdpPeer, int> connectionLatencyUpdated)
@@ -85,12 +78,10 @@ namespace ReliableUdp.NetworkStatistic
 			this.FlowManagement.ResetFlowTimer(deltaTime);
 			this.TimeSinceLastPacket += deltaTime;
 
-			//RTT - round trip time
 			this.rttResetTimer += deltaTime;
 			if (this.rttResetTimer >= RTT_RESET_DELAY)
 			{
 				this.rttResetTimer = 0;
-				//Rtt update
 				this.rtt = this.avgRtt;
 				this.Ping = this.avgRtt;
 				connectionLatencyUpdated(peer, this.Ping);

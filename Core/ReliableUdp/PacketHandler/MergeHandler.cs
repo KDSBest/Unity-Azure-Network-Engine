@@ -41,7 +41,6 @@ namespace ReliableUdp.PacketHandler
 
 		public bool SendRawData(UdpPeer peer, UdpPacket packet)
 		{
-			//2 - merge byte + minimal packet size + datalen(ushort)
 			if (Enabled &&
 				 CanMerge(packet.Type) &&
 				 this.mergePos + packet.Size + HeaderSize.DEFAULT * 2 + 2 < peer.PacketMtuHandler.Mtu)
@@ -51,7 +50,7 @@ namespace ReliableUdp.PacketHandler
 				this.mergePos += packet.Size + 2;
 				this.mergeCount++;
 
-				//DebugWriteForce("Merged: " + _mergePos + "/" + (_mtu - 2) + ", count: " + _mergeCount);
+                System.Diagnostics.Debug.WriteLine($"Merged: {mergePos}/{peer.PacketMtuHandler.Mtu - 2}, count: {mergeCount}");
 				return true;
 			}
 
@@ -69,7 +68,6 @@ namespace ReliableUdp.PacketHandler
 				}
 				else
 				{
-					//Send without length information and merging
 					peer.SendRaw(this.mergeData.RawData, HeaderSize.DEFAULT + 2, this.mergePos - 2, peer.EndPoint);
 				}
 				this.mergePos = 0;

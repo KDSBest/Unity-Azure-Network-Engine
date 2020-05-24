@@ -51,19 +51,15 @@ namespace ReliableUdp.PacketHandler
 
 		public void Update(UdpPeer peer, int deltaTime)
 		{
-			//Send ping
 			this.pingSendTimer += deltaTime;
 			if (this.pingSendTimer >= PingInterval)
 			{
 				System.Diagnostics.Debug.WriteLine("Send ping...");
 
-				//reset timer
 				this.pingSendTimer = 0;
 
-				//send ping
 				peer.CreateAndSend(PacketType.Ping, this.pingSequence);
 
-				//reset timer
 				this.pingTimeStart = DateTime.UtcNow;
 			}
 		}

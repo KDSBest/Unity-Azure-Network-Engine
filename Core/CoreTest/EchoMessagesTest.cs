@@ -154,7 +154,6 @@ namespace CoreTest
 			clientMessagesReceivedCount = 0;
 			serverMessagesReceivedCount = 0;
 
-			//Server
 			this.serverListener = new ServerListener();
 
 			UdpManager server = new UdpManager(this.serverListener, "myapp1", 2);
@@ -164,7 +163,6 @@ namespace CoreTest
 				Assert.Fail("Server start failed");
 			}
 	
-			//Client
 			this.clientListener = new ClientListener();
 
 			UdpManager client1 = new UdpManager(this.clientListener, "myapp1");

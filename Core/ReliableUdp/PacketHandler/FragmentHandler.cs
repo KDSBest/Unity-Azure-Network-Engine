@@ -170,7 +170,7 @@ namespace ReliableUdp.PacketHandler
 			{
 				UdpPacket p = peer.GetPacketFromPool(type, lastPacketSize + HeaderSize.FRAGMENT);
 				p.FragmentId = this.fragmentId;
-				p.FragmentPart = (ushort)fullPacketsCount; // last
+				p.FragmentPart = (ushort)fullPacketsCount;
 				p.FragmentsTotal = (ushort)totalPackets;
 				p.IsFragmented = true;
 				Buffer.BlockCopy(data, fullPacketsCount * packetDataSize, p.RawData, dataOffset, lastPacketSize);

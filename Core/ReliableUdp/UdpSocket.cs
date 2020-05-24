@@ -57,7 +57,6 @@ namespace ReliableUdp
 
 			while (this.running)
 			{
-				//wait for data
 				if (!socket.Poll(SOCKET_RECEIVE_POLL_TIME, SelectMode.SelectRead))
 				{
 					continue;
@@ -65,7 +64,6 @@ namespace ReliableUdp
 
 				int result;
 
-				//Reading data
 				try
 				{
 					result = socket.ReceiveFrom(receiveBuffer, 0, receiveBuffer.Length, SocketFlags.None, ref bufferEndPoint);
@@ -128,11 +126,9 @@ namespace ReliableUdp
 			this.threadv4.IsBackground = true;
 			this.threadv4.Start(this.udpSocketv4);
 
-			//Check IPv6 support
 			if (!ipv6Support)
 				return true;
 
-			//Use one port for two sockets
 			port = this.LocalEndPoint.Port;
 
 			this.udpSocketv6 = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
@@ -261,7 +257,6 @@ namespace ReliableUdp
 		{
 			this.running = false;
 
-			//Close IPv4
 			if (Thread.CurrentThread != this.threadv4)
 			{
 				this.threadv4.Join();
@@ -273,11 +268,9 @@ namespace ReliableUdp
 				this.udpSocketv4 = null;
 			}
 
-			//No ipv6
 			if (this.udpSocketv6 == null)
 				return;
 
-			//Close IPv6
 			if (Thread.CurrentThread != this.threadv6)
 			{
 				this.threadv6.Join();

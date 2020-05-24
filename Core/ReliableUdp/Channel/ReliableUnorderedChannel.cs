@@ -13,9 +13,9 @@ namespace ReliableUdp.Channel
     public class ReliableUnorderedChannel : IReliableChannel
 	{
 		private readonly Queue<UdpPacket> outgoingPackets;
-		private readonly bool[] outgoingAcks;               //for send acks
-		private readonly PendingPacket[] pendingPackets;    //for unacked packets and duplicates
-		private readonly bool[] earlyReceived;              //for unordered
+		private readonly bool[] outgoingAcks;
+		private readonly PendingPacket[] pendingPackets;
+		private readonly bool[] earlyReceived;
 
 		private SequenceNumber localSeqence = new SequenceNumber(0);
 		private SequenceNumber remoteSequence = new SequenceNumber(0);
@@ -56,7 +56,6 @@ namespace ReliableUdp.Channel
 			this.peer = peer;
 		}
 
-		//ProcessAck in packet
 		public void ProcessAck(UdpPacket packet)
 		{
 			int validPacketSize = (this.windowSize - 1) / BITS_IN_BYTE + 1 + HeaderSize.SEQUENCED;
@@ -72,7 +71,6 @@ namespace ReliableUdp.Channel
 				return;
 			}
 
-			//check relevance
 			if ((packet.Sequence - this.localWindowStart).Value <= -this.windowSize)
 			{
 				System.Diagnostics.Debug.WriteLine("Old Acks.");
@@ -103,7 +101,6 @@ namespace ReliableUdp.Channel
 
 				if (ackSequence == this.localWindowStart)
 				{
-					//Move window
 					this.localWindowStart++;
 				}
 
@@ -132,7 +129,6 @@ namespace ReliableUdp.Channel
 
 		private void ProcessQueuedPackets()
 		{
-			//get packets from queue
 			while (this.outgoingPackets.Count > 0)
 			{
 				var relate = this.localSeqence - this.localWindowStart;
@@ -147,7 +143,7 @@ namespace ReliableUdp.Channel
 					this.pendingPackets[this.localSeqence.Value % this.windowSize].Packet = packet;
 					this.localSeqence++;
 				}
-				else //Queue filled
+				else
 				{
 					break;
 				}
@@ -156,13 +152,11 @@ namespace ReliableUdp.Channel
 
 		public bool SendNextPacket()
 		{
-			//check sending acks
 			DateTime currentTime = DateTime.UtcNow;
 
 			Monitor.Enter(this.pendingPackets);
 			ProcessQueuedPackets();
 
-			//send
 			PendingPacket currentPacket;
 			bool packetFound = false;
 			int startQueueIndex = this.queueIndex;
@@ -171,7 +165,6 @@ namespace ReliableUdp.Channel
 				currentPacket = this.pendingPackets[this.queueIndex];
 				if (currentPacket.Packet != null)
 				{
-					//check send time
 					if (currentPacket.TimeStamp.HasValue)
 					{
 						double packetHoldTime = (currentTime - currentPacket.TimeStamp.Value).TotalMilliseconds;
@@ -181,7 +174,7 @@ namespace ReliableUdp.Channel
 							packetFound = true;
 						}
 					}
-					else //Never sended
+					else
 					{
 						packetFound = true;
 					}
@@ -208,19 +201,15 @@ namespace ReliableUdp.Channel
 
             System.Diagnostics.Debug.WriteLine($"Send Acks.");
 
-            //Init packet
             int bytesCount = (this.windowSize - 1) / BITS_IN_BYTE + 1;
 			PacketType packetType = PacketType.AckReliable;
 			var acksPacket = this.peer.GetPacketFromPool(packetType, bytesCount);
 
-			//For quick access
-			byte[] data = acksPacket.RawData; //window start + acks size
+			byte[] data = acksPacket.RawData;
 
-			//Put window start
 			Monitor.Enter(this.outgoingAcks);
 			acksPacket.Sequence = this.remoteWindowStart;
 
-			//Put acks
 			int startAckIndex = this.remoteWindowStart.Value % this.windowSize;
 			int currentAckIndex = startAckIndex;
 			int currentBit = 0;
@@ -246,7 +235,6 @@ namespace ReliableUdp.Channel
 			this.peer.Recycle(acksPacket);
 		}
 
-		//Process incoming packet
 		public void ProcessPacket(UdpPacket packet)
 		{
 			if (!packet.Sequence.IsValid)
@@ -264,7 +252,6 @@ namespace ReliableUdp.Channel
                 return;
 			}
 
-			//Drop bad packets
 			if (relate.Value < 0)
 			{
                 System.Diagnostics.Debug.WriteLine("Reliable in order too old.");
@@ -276,14 +263,11 @@ namespace ReliableUdp.Channel
                 return;
 			}
 
-			//If very new - move window
 			Monitor.Enter(this.outgoingAcks);
 			if (relate.Value >= this.windowSize)
 			{
-				//New window position
 				int newWindowStart = (this.remoteWindowStart.Value + relate.Value - this.windowSize + 1) % SequenceNumber.MAX_SEQUENCE;
 
-				//Clean old data
 				while (this.remoteWindowStart.Value != newWindowStart)
 				{
 					this.outgoingAcks[this.remoteWindowStart.Value % this.windowSize] = false;
@@ -300,11 +284,9 @@ namespace ReliableUdp.Channel
 				return;
 			}
 
-			//save ack
 			this.outgoingAcks[packet.Sequence.Value % this.windowSize] = true;
 			Monitor.Exit(this.outgoingAcks);
 
-			//detailed check
 			if (packet.Sequence == this.remoteSequence)
 			{
                 System.Diagnostics.Debug.WriteLine("Reliable in order packet success.");
@@ -313,7 +295,6 @@ namespace ReliableUdp.Channel
 
 				while (this.earlyReceived[this.remoteSequence.Value % this.windowSize])
 				{
-					//process early packet
 					this.earlyReceived[this.remoteSequence.Value % this.windowSize] = false;
 					this.remoteSequence++;
 				}

@@ -22,7 +22,6 @@ namespace CoreTest
 			{
 				Console.WriteLine("[Client] connected to: {0}:{1}", peer.EndPoint.Host, peer.EndPoint.Port);
 
-				//And test fragment
 				byte[] testData = new byte[13218];
 				testData[0] = 192;
 				testData[13217] = 31;
@@ -54,10 +53,8 @@ namespace CoreTest
 
 			public void OnNetworkReceiveAck(UdpPeer peer, UdpDataReader reader, ChannelType channel)
 			{
-				//echo
 				peer.Send(reader.Data, ChannelType.Reliable);
 
-				//fragment log
 				if (reader.AvailableBytes == 13218)
 				{
 					Console.WriteLine("[Client] Ack TestFrag: {0}, {1}", reader.Data[0], reader.Data[13217]);
@@ -110,10 +107,8 @@ namespace CoreTest
 
 			public void OnNetworkReceive(UdpPeer peer, UdpDataReader reader, ChannelType channel)
 			{
-				//echo
 				peer.Send(reader.Data, ChannelType.Reliable);
 
-				//fragment log
 				if (reader.AvailableBytes == 13218)
 				{
 					Console.WriteLine("[Server] TestFrag: {0}, {1}", reader.Data[0], reader.Data[13217]);
@@ -153,7 +148,6 @@ namespace CoreTest
 		[TestMethod]
 		public void TestFrag()
 		{
-			//Server
 			this.serverListener = new ServerListener();
 
 			UdpManager server = new UdpManager(this.serverListener, "myapp1", 2);
@@ -164,7 +158,6 @@ namespace CoreTest
 			}
 			this.serverListener.Server = server;
 
-			//Client
 			this.clientListener = new ClientListener();
 
 			UdpManager client1 = new UdpManager(this.clientListener, "myapp1");

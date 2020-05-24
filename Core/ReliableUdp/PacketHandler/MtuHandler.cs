@@ -27,7 +27,6 @@ namespace ReliableUdp.PacketHandler
 					 packet.RawData[1] >= Const.Mtu.PossibleValues.Length)
 				return;
 
-			//MTU auto increase
 			if (packet.Type == PacketType.MtuCheck)
 			{
 				if (packet.Size != Const.Mtu.PossibleValues[packet.RawData[1]])
@@ -41,14 +40,14 @@ namespace ReliableUdp.PacketHandler
 				mtuOkPacket.RawData[1] = packet.RawData[1];
 				peer.SendPacket(mtuOkPacket);
 			}
-			else if (packet.RawData[1] > this.mtuIdx) //MtuOk
+			else if (packet.RawData[1] > this.mtuIdx)
 			{
 				lock (this.lockObject)
 				{
 					this.mtuIdx = packet.RawData[1];
 					this.Mtu = Const.Mtu.PossibleValues[this.mtuIdx];
 				}
-				//if maxed - finish.
+
 				if (this.mtuIdx == Const.Mtu.PossibleValues.Length - 1)
 				{
 					this.finishMtu = true;
@@ -75,7 +74,6 @@ namespace ReliableUdp.PacketHandler
 					{
 						lock (this.lockObject)
 						{
-							//Send increased packet
 							if (this.mtuIdx < Const.Mtu.PossibleValues.Length - 1)
 							{
 								int newMtu = Const.Mtu.PossibleValues[this.mtuIdx + 1] - HeaderSize.DEFAULT;

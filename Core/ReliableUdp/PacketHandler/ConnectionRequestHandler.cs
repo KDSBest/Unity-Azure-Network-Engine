@@ -67,7 +67,6 @@ namespace ReliableUdp.PacketHandler
 			if (this.ConnectionState != ConnectionState.InProgress)
 				return false;
 
-			// check connection id
 			if (BitConverter.ToInt64(packet.RawData, 1) != this.ConnectId)
 			{
 				return false;

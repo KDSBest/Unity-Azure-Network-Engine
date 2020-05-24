@@ -320,13 +320,11 @@ namespace ReliableUdp.Utility
 				return;
 			}
 
-			//put bytes count
 			int bytesCount = Encoding.UTF8.GetByteCount(value);
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + bytesCount + 4);
 			this.Put(bytesCount);
 
-			//put string
 			Encoding.UTF8.GetBytes(value, 0, value.Length, this._data, this.Position);
 			this.Position += bytesCount;
 		}
@@ -340,15 +338,13 @@ namespace ReliableUdp.Utility
 			}
 
 			int length = value.Length > maxLength ? maxLength : value.Length;
-			//calculate max count
+
 			int bytesCount = Encoding.UTF8.GetByteCount(value);
 			if (this.autoResize)
 				this.ResizeIfNeed(this.Position + bytesCount + 4);
 
-			//put bytes count
 			this.Put(bytesCount);
 
-			//put string
 			Encoding.UTF8.GetBytes(value, 0, length, this._data, this.Position);
 
 			this.Position += bytesCount;
