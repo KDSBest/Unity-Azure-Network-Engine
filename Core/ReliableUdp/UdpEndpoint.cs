@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Net;
+using System.Net.Sockets;
 
 namespace ReliableUdp
 {
-	using System.Net;
-	using System.Net.Sockets;
-
-	public sealed class UdpEndPoint
+    public sealed class UdpEndPoint
 	{
 		public string Host { get { return EndPoint.Address.ToString(); } }
 		public int Port { get { return EndPoint.Port; } }

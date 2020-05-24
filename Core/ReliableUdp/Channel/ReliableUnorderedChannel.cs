@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
+
+using ReliableUdp.Const;
+using ReliableUdp.Enums;
+using ReliableUdp.Packet;
+
+using ReliableUdp.Utility;
 
 namespace ReliableUdp.Channel
 {
-	using System.Threading;
-
-	using ReliableUdp.Const;
-	using ReliableUdp.Enums;
-	using ReliableUdp.Logging;
-	using ReliableUdp.Packet;
-
-	using Utility;
-
-	public class ReliableUnorderedChannel : IReliableChannel
+    public class ReliableUnorderedChannel : IReliableChannel
 	{
 		private readonly Queue<UdpPacket> outgoingPackets;
 		private readonly bool[] outgoingAcks;               //for send acks
@@ -66,25 +62,25 @@ namespace ReliableUdp.Channel
 			int validPacketSize = (this.windowSize - 1) / BITS_IN_BYTE + 1 + HeaderSize.SEQUENCED;
 			if (packet.Size != validPacketSize)
 			{
-				//// Factory.Get<IUdpLogger>().Log("Invalid Ack Packet Size.");
+				System.Diagnostics.Debug.WriteLine("Invalid Ack Packet Size.");
 				return;
 			}
 
 			if (!packet.Sequence.IsValid)
 			{
-				//// Factory.Get<IUdpLogger>().Log("Sequence is Invalid.");
+				System.Diagnostics.Debug.WriteLine("Sequence is Invalid.");
 				return;
 			}
 
 			//check relevance
 			if ((packet.Sequence - this.localWindowStart).Value <= -this.windowSize)
 			{
-				//// Factory.Get<IUdpLogger>().Log("Old Acks.");
+				System.Diagnostics.Debug.WriteLine("Old Acks.");
 				return;
 			}
 
 			byte[] acksData = packet.RawData;
-			//// Factory.Get<IUdpLogger>().Log($"Acks beginning {packet.Sequence.Value}");
+			System.Diagnostics.Debug.WriteLine($"Acks beginning {packet.Sequence.Value}");
 			int startByte = HeaderSize.SEQUENCED;
 
 			Monitor.Enter(this.pendingPackets);
@@ -116,11 +112,11 @@ namespace ReliableUdp.Channel
 				{
 					this.peer.AddIncomingAck(removed, ChannelType.Reliable);
 
-					//// Factory.Get<IUdpLogger>().Log($"Removing reliableInOrder ack: {ackSequence.Value} - true.");
+					System.Diagnostics.Debug.WriteLine($"Removing reliableInOrder ack: {ackSequence.Value} - true.");
 				}
 				else
 				{
-					//// Factory.Get<IUdpLogger>().Log($"Removing reliableInOrder ack: {ackSequence.Value} - false.");
+					System.Diagnostics.Debug.WriteLine($"Removing reliableInOrder ack: {ackSequence.Value} - false.");
 				}
 			}
 			Monitor.Exit(this.pendingPackets);
@@ -181,7 +177,7 @@ namespace ReliableUdp.Channel
 						double packetHoldTime = (currentTime - currentPacket.TimeStamp.Value).TotalMilliseconds;
 						if (packetHoldTime > this.peer.NetworkStatisticManagement.ResendDelay)
 						{
-							//// Factory.Get<IUdpLogger>().Log($"Resend: {(int)packetHoldTime} > {this.peer.NetworkStatisticManagement.ResendDelay}.");
+							System.Diagnostics.Debug.WriteLine($"Resend: {(int)packetHoldTime} > {this.peer.NetworkStatisticManagement.ResendDelay}.");
 							packetFound = true;
 						}
 					}
@@ -198,7 +194,7 @@ namespace ReliableUdp.Channel
 			{
 				currentPacket.TimeStamp = DateTime.Now;
 				this.peer.SendRawData(currentPacket.Packet);
-				//// Factory.Get<IUdpLogger>().Log($"Sended.");
+				System.Diagnostics.Debug.WriteLine($"Sended.");
 			}
 			Monitor.Exit(this.pendingPackets);
 			return packetFound;
@@ -210,7 +206,7 @@ namespace ReliableUdp.Channel
 				return;
 			this.mustSendAcks = false;
 
-            //// Factory.Get<IUdpLogger>().Log($"Send Acks.");
+            System.Diagnostics.Debug.WriteLine($"Send Acks.");
 
             //Init packet
             int bytesCount = (this.windowSize - 1) / BITS_IN_BYTE + 1;
@@ -255,7 +251,7 @@ namespace ReliableUdp.Channel
 		{
 			if (!packet.Sequence.IsValid)
 			{
-                //// Factory.Get<IUdpLogger>().Log("Bad Sequence.");
+                System.Diagnostics.Debug.WriteLine("Bad Sequence.");
                 return;
 			}
 
@@ -264,19 +260,19 @@ namespace ReliableUdp.Channel
 
 			if (relateSeq.Value > this.windowSize)
 			{
-                //// Factory.Get<IUdpLogger>().Log("Bad Sequence for window size.");
+                System.Diagnostics.Debug.WriteLine("Bad Sequence for window size.");
                 return;
 			}
 
 			//Drop bad packets
 			if (relate.Value < 0)
 			{
-                //// Factory.Get<IUdpLogger>().Log("Reliable in order too old.");
+                System.Diagnostics.Debug.WriteLine("Reliable in order too old.");
                 return;
 			}
 			if (relate.Value >= this.windowSize * 2)
 			{
-                //// Factory.Get<IUdpLogger>().Log("Reliable in order too new.");
+                System.Diagnostics.Debug.WriteLine("Reliable in order too new.");
                 return;
 			}
 
@@ -299,7 +295,7 @@ namespace ReliableUdp.Channel
 
 			if (this.outgoingAcks[packet.Sequence.Value % this.windowSize])
 			{
-                //// Factory.Get<IUdpLogger>().Log("Reliable in order duplicate.");
+                System.Diagnostics.Debug.WriteLine("Reliable in order duplicate.");
                 Monitor.Exit(this.outgoingAcks);
 				return;
 			}
@@ -311,7 +307,7 @@ namespace ReliableUdp.Channel
 			//detailed check
 			if (packet.Sequence == this.remoteSequence)
 			{
-                //// Factory.Get<IUdpLogger>().Log("Reliable in order packet success.");
+                System.Diagnostics.Debug.WriteLine("Reliable in order packet success.");
                 this.peer.AddIncomingPacket(packet, ChannelType.Reliable);
 				this.remoteSequence++;
 

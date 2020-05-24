@@ -1,22 +1,23 @@
-﻿namespace ReliableUdp.Packet
+﻿using System;
+
+using ReliableUdp.BitUtility;
+using ReliableUdp.Const;
+using ReliableUdp.Enums;
+using ReliableUdp.Utility;
+
+namespace ReliableUdp.Packet
 {
-	using System;
-
-	using ReliableUdp.BitUtility;
-	using ReliableUdp.Const;
-	using ReliableUdp.Enums;
-	using ReliableUdp.Utility;
-
 	public class UdpPacket
 	{
 		public const int SIZE_LIMIT = ushort.MaxValue - HeaderSize.MAX_UDP;
-		private const int LAST_PROPERTY = 19;
+        public const byte FRAGMENTED_BIT = 0x80;
+        public const byte PACKET_TYPE_MASK = 0x7F;
 
 		//Header
 		public PacketType Type
 		{
-			get { return (PacketType)(this.RawData[0] & 0x7F); }
-			set { this.RawData[0] = (byte)((this.RawData[0] & 0x80) | ((byte)value & 0x7F)); }
+			get { return (PacketType)(this.RawData[0] & PACKET_TYPE_MASK); }
+			set { this.RawData[0] = (byte)((this.RawData[0] & FRAGMENTED_BIT) | ((byte)value & PACKET_TYPE_MASK)); }
 		}
 
 		public SequenceNumber Sequence
@@ -27,13 +28,13 @@
 
 		public bool IsFragmented
 		{
-			get { return (this.RawData[0] & 0x80) != 0; }
+			get { return (this.RawData[0] & FRAGMENTED_BIT) != 0; }
 			set
 			{
 				if (value)
-					this.RawData[0] |= 0x80; //set first bit
+					this.RawData[0] |= FRAGMENTED_BIT;
 				else
-					this.RawData[0] &= 0x7F; //unset first bit
+					this.RawData[0] &= PACKET_TYPE_MASK;
 			}
 		}
 
@@ -55,7 +56,6 @@
 			set { BitHelper.GetBytes(this.RawData, 7, value); }
 		}
 
-		//Data
 		public readonly byte[] RawData;
 		public int Size;
 
@@ -63,18 +63,6 @@
 		{
 			this.RawData = new byte[size];
 			this.Size = 0;
-		}
-
-		public static bool GetPacketProperty(byte[] data, out PacketType type)
-		{
-			byte properyByte = (byte)(data[0] & 0x7F);
-			if (properyByte > LAST_PROPERTY)
-			{
-				type = PacketType.Unreliable;
-				return false;
-			}
-			type = (PacketType)properyByte;
-			return true;
 		}
 
 		public static int GetHeaderSize(PacketType type)
@@ -98,15 +86,6 @@
 			return data;
 		}
 
-		public bool IsClientData()
-		{
-			var property = this.Type;
-			return property == PacketType.Reliable ||
-					 property == PacketType.ReliableOrdered ||
-					 property == PacketType.Unreliable ||
-					 property == PacketType.UnreliableOrdered;
-		}
-
 		public static bool IsSequenced(PacketType type)
 		{
 			return type == PacketType.ReliableOrdered ||
@@ -118,15 +97,14 @@
 				 type == PacketType.AckReliableOrdered;
 		}
 
-		//Packet contstructor from byte array
 		public bool FromBytes(byte[] data, int start, int packetSize)
 		{
 			//Reading type
-			byte property = (byte)(data[start] & 0x7F);
-			bool fragmented = (data[start] & 0x80) != 0;
+			byte property = (byte)(data[start] & PACKET_TYPE_MASK);
+			bool fragmented = (data[start] & FRAGMENTED_BIT) != 0;
 			int headerSize = GetHeaderSize((PacketType)property);
 
-			if (property > LAST_PROPERTY ||
+			if (property >= (byte)PacketType.PacketTypeTooHigh ||
 				 packetSize > SIZE_LIMIT ||
 				 packetSize < headerSize ||
 				 (fragmented && packetSize < headerSize + HeaderSize.FRAGMENT))

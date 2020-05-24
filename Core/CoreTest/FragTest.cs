@@ -1,19 +1,16 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Threading;
+
+using ReliableUdp;
+using ReliableUdp.Enums;
+using ReliableUdp.Utility;
 
 namespace CoreTest
 {
-	using System.Threading;
-
-	using ReliableUdp;
-	using ReliableUdp.Enums;
-	using ReliableUdp.Utility;
-
 	[TestClass]
 	public class FragTest
 	{
-		private static int messagesReceivedCount = 0;
-
 		private class ClientListener : IUdpEventListener
 		{
 			public bool IsTestRecOk { get; set; }

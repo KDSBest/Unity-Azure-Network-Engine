@@ -3,20 +3,17 @@ using System.Collections.Generic;
 
 using ReliableUdp.NetworkStatistic;
 using ReliableUdp.PacketHandler;
+using ReliableUdp.Channel;
+
+using ReliableUdp.Enums;
+using ReliableUdp.Packet;
+using ReliableUdp.Utility;
 
 namespace ReliableUdp
 {
-	using Channel;
-
-	using Enums;
-	using Logging;
-	using Packet;
-	using Utility;
-
-	public class UdpPeer
+    public class UdpPeer
 	{
-		private readonly UdpManager peerListener;
-		private readonly UdpPacketPool packetPool;
+        private readonly UdpPacketPool packetPool;
 		private readonly object flushLock = new object();
 
 		public UdpEndPoint EndPoint { get; private set; }
@@ -42,12 +39,9 @@ namespace ReliableUdp
 			get { return this.PacketConnectionRequestHandler.ConnectId; }
 		}
 
-		public UdpManager UdpManager
-		{
-			get { return this.peerListener; }
-		}
+        public UdpManager UdpManager { get; }
 
-		public UdpSettings Settings
+        public UdpSettings Settings
 		{
 			get
 			{
@@ -58,7 +52,7 @@ namespace ReliableUdp
 		public UdpPeer(UdpManager peerListener, UdpEndPoint endPoint, long connectId)
 		{
 			this.packetPool = peerListener.PacketPool;
-			this.peerListener = peerListener;
+			this.UdpManager = peerListener;
 			this.EndPoint = endPoint;
 
 			this.NetworkStatisticManagement = new NetworkStatisticManagement();
@@ -111,14 +105,6 @@ namespace ReliableUdp
 			this.Send(dataWriter.Data, 0, dataWriter.Length, channelType);
 		}
 
-		public void Send(IProtocolPacket packet, ChannelType channelType)
-		{
-			var dataWriter = new UdpDataWriter();
-			dataWriter.Reset();
-			packet.Serialize(dataWriter);
-			this.Send(dataWriter, channelType);
-		}
-
 		public void Send(byte[] data, int start, int length, ChannelType options)
 		{
 			PacketType type = SendOptionsToProperty(options);
@@ -143,7 +129,7 @@ namespace ReliableUdp
 
 		public void SendPacket(UdpPacket packet)
 		{
-			// Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
+			System.Diagnostics.Debug.WriteLine($"Packet type {packet.Type}");
 			switch (packet.Type)
 			{
 				case PacketType.Unreliable:
@@ -183,7 +169,7 @@ namespace ReliableUdp
 			}
 			else
 			{
-				this.peerListener.ReceiveAckFromPeer(p, this.EndPoint, channel);
+				this.UdpManager.ReceiveAckFromPeer(p, this.EndPoint, channel);
 				this.packetPool.Recycle(p);
 			}
 		}
@@ -196,7 +182,7 @@ namespace ReliableUdp
 			}
 			else
 			{
-				this.peerListener.ReceiveFromPeer(p, this.EndPoint, channel);
+				this.UdpManager.ReceiveFromPeer(p, this.EndPoint, channel);
 				this.packetPool.Recycle(p);
 			}
 		}
@@ -205,7 +191,7 @@ namespace ReliableUdp
 		{
 			this.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 
-			// Factory.Get<IUdpLogger>().Log($"Packet type {packet.Type}");
+			System.Diagnostics.Debug.WriteLine($"Packet type {packet.Type}");
 			switch (packet.Type)
 			{
 				case PacketType.ConnectAccept:
@@ -249,7 +235,7 @@ namespace ReliableUdp
 					break;
 
 				default:
-					// Factory.Get<IUdpLogger>().Log($"Error! Unexpected packet type {packet.Type}");
+					System.Diagnostics.Debug.WriteLine($"Error! Unexpected packet type {packet.Type}");
 					break;
 			}
 		}
@@ -261,13 +247,13 @@ namespace ReliableUdp
 				return;
 			}
 
-			// Factory.Get<IUdpLogger>().Log($"Sending Packet {packet.Type}");
-			this.peerListener.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint);
+			System.Diagnostics.Debug.WriteLine($"Sending Packet {packet.Type}");
+			this.UdpManager.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint);
 		}
 
 		public bool SendRaw(byte[] message, int start, int length, UdpEndPoint endPoint)
 		{
-			return this.peerListener.SendRaw(message, start, length, endPoint);
+			return this.UdpManager.SendRaw(message, start, length, endPoint);
 		}
 
 		private void SendQueuedPackets(int currentMaxSend)
@@ -313,7 +299,7 @@ namespace ReliableUdp
 				chan.SendAcks();
 			}
 
-			this.NetworkStatisticManagement.Update(this, deltaTime, this.peerListener.ConnectionLatencyUpdated);
+			this.NetworkStatisticManagement.Update(this, deltaTime, this.UdpManager.ConnectionLatencyUpdated);
 			this.PacketPingPongHandler.Update(this, deltaTime);
 
 			this.PacketMtuHandler.Update(this, deltaTime);
@@ -336,7 +322,7 @@ namespace ReliableUdp
 
 		public bool SendRawAndRecycle(UdpPacket packet, UdpEndPoint peerEndPoint)
 		{
-			return this.peerListener.SendRawAndRecycle(packet, peerEndPoint);
+			return this.UdpManager.SendRawAndRecycle(packet, peerEndPoint);
 		}
 
 		public UdpPacket GetAndRead(byte[] packetRawData, int pos, ushort size)
@@ -346,7 +332,7 @@ namespace ReliableUdp
 
 		public void EnqueueEvent(UdpEvent evt)
 		{
-			this.peerListener.EnqueueEvent(evt);
+			this.UdpManager.EnqueueEvent(evt);
 		}
 	}
 }

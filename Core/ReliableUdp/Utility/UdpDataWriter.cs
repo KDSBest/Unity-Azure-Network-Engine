@@ -1,12 +1,11 @@
+using System;
+using System.Text;
+
+using ReliableUdp.BitUtility;
+
 namespace ReliableUdp.Utility
 {
-	using System;
-	using System.Text;
-
-	using ReliableUdp.BitUtility;
-	using ReliableUdp.Packet;
-
-	public class UdpDataWriter
+    public class UdpDataWriter
 	{
 		protected byte[] _data;
 		protected int Position;
@@ -177,11 +176,6 @@ namespace ReliableUdp.Utility
 				this.ResizeIfNeed(this.Position + 1);
 			this._data[this.Position] = (byte)(value ? 1 : 0);
 			this.Position++;
-		}
-
-		public void Put(IProtocolPacket packet)
-		{
-			packet.Serialize(this);
 		}
 
 		public void Put(float[] value)

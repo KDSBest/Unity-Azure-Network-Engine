@@ -1,9 +1,9 @@
-﻿namespace ReliableUdp.Channel
-{
-    using ReliableUdp.Enums;
-    using ReliableUdp.Packet;
-    using System.Collections.Concurrent;
+﻿using ReliableUdp.Enums;
+using ReliableUdp.Packet;
+using System.Collections.Concurrent;
 
+namespace ReliableUdp.Channel
+{
     public class UnreliableUnorderedChannel : IUnreliableChannel
 	{
 		private readonly ConcurrentQueue<UdpPacket> outgoingPackets = new ConcurrentQueue<UdpPacket>();

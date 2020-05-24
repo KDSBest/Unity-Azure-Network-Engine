@@ -7,8 +7,7 @@ namespace ReliableUdp.PacketHandler
 {
     public class MtuHandler
 	{
-		private int mtu = Const.Mtu.PossibleValues[0];
-		private int mtuIdx;
+        private int mtuIdx;
 		private bool finishMtu;
 		private int mtuCheckTimer;
 		private int mtuCheckAttempts;
@@ -16,12 +15,9 @@ namespace ReliableUdp.PacketHandler
 		private const int MAX_MTU_CHECK_ATTEMPTS = 4;
 		private readonly object lockObject = new object();
 
-		public int Mtu
-		{
-			get { return this.mtu; }
-		}
+        public int Mtu { get; private set; } = Const.Mtu.PossibleValues[0];
 
-		public MtuHandler()
+        public MtuHandler()
 		{
 		}
 
@@ -40,7 +36,7 @@ namespace ReliableUdp.PacketHandler
 				}
 				this.mtuCheckAttempts = 0;
 
-				// Factory.Get<IUdpLogger>().Log($"MTU check. Resend {packet.RawData[1]}");
+				System.Diagnostics.Debug.WriteLine($"MTU check. Resend {packet.RawData[1]}");
 				var mtuOkPacket = peer.GetPacketFromPool(PacketType.MtuOk, 1);
 				mtuOkPacket.RawData[1] = packet.RawData[1];
 				peer.SendPacket(mtuOkPacket);
@@ -50,7 +46,7 @@ namespace ReliableUdp.PacketHandler
 				lock (this.lockObject)
 				{
 					this.mtuIdx = packet.RawData[1];
-					this.mtu = Const.Mtu.PossibleValues[this.mtuIdx];
+					this.Mtu = Const.Mtu.PossibleValues[this.mtuIdx];
 				}
 				//if maxed - finish.
 				if (this.mtuIdx == Const.Mtu.PossibleValues.Length - 1)
@@ -58,7 +54,7 @@ namespace ReliableUdp.PacketHandler
 					this.finishMtu = true;
 				}
 
-				// Factory.Get<IUdpLogger>().Log($"MTU is set to {this.mtu}");
+				System.Diagnostics.Debug.WriteLine($"MTU is set to {this.Mtu}");
 			}
 		}
 

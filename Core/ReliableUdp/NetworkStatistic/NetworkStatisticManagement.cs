@@ -6,23 +6,16 @@ namespace ReliableUdp.NetworkStatistic
 	{
 		public FlowManagement FlowManagement { get; private set; }
 
-		private int ping;
-		private int rtt;
+        private int rtt;
 		private int avgRtt;
 		private int rttCount;
 		private int goodRttCount;
 
-		public int TimeSinceLastPacket
-		{
-			get { return this.timeSinceLastPacket; }
-		}
+        public int TimeSinceLastPacket { get; private set; }
 
-		public int Ping
-		{
-			get { return this.ping; }
-		}
+        public int Ping { get; private set; }
 
-		public double ResendDelay
+        public double ResendDelay
 		{
 			get { return this.avgRtt; }
 		}
@@ -30,9 +23,7 @@ namespace ReliableUdp.NetworkStatistic
 		private const int RTT_RESET_DELAY = 1000;
 		private int rttResetTimer;
 
-		private int timeSinceLastPacket;
-
-		public NetworkStatisticManagement()
+        public NetworkStatisticManagement()
 		{
 			this.FlowManagement = new FlowManagement();
 
@@ -43,7 +34,7 @@ namespace ReliableUdp.NetworkStatistic
 
 		public void ResetTimeSinceLastPacket()
 		{
-			this.timeSinceLastPacket = 0;
+			this.TimeSinceLastPacket = 0;
 		}
 
 		public void UpdateRoundTripTime(int roundTripTime)
@@ -70,7 +61,7 @@ namespace ReliableUdp.NetworkStatistic
 					this.goodRttCount = 0;
 					this.FlowManagement.CurrentFlowMode--;
 
-					// Factory.Get<IUdpLogger>().Log($"Increased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+					System.Diagnostics.Debug.WriteLine($"Increased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
 				}
 			}
 			else if (this.avgRtt > this.FlowManagement.GetStartRtt(this.FlowManagement.CurrentFlowMode))
@@ -79,7 +70,7 @@ namespace ReliableUdp.NetworkStatistic
 				if (this.FlowManagement.CurrentFlowMode < this.FlowManagement.GetMaxFlowMode())
 				{
 					this.FlowManagement.CurrentFlowMode++;
-					// Factory.Get<IUdpLogger>().Log($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+					System.Diagnostics.Debug.WriteLine($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
 				}
 			}
 
@@ -92,7 +83,7 @@ namespace ReliableUdp.NetworkStatistic
 		public void Update(UdpPeer peer, int deltaTime, Action<UdpPeer, int> connectionLatencyUpdated)
 		{
 			this.FlowManagement.ResetFlowTimer(deltaTime);
-			this.timeSinceLastPacket += deltaTime;
+			this.TimeSinceLastPacket += deltaTime;
 
 			//RTT - round trip time
 			this.rttResetTimer += deltaTime;
@@ -101,8 +92,8 @@ namespace ReliableUdp.NetworkStatistic
 				this.rttResetTimer = 0;
 				//Rtt update
 				this.rtt = this.avgRtt;
-				this.ping = this.avgRtt;
-				connectionLatencyUpdated(peer, this.ping);
+				this.Ping = this.avgRtt;
+				connectionLatencyUpdated(peer, this.Ping);
 				this.rttCount = 1;
 			}
 		}

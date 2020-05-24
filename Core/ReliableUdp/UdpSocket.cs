@@ -18,32 +18,28 @@ namespace ReliableUdp
 
 		private Socket udpSocketv4;
 		private Socket udpSocketv6;
-		private UdpEndPoint localEndPoint;
-		private Thread threadv4;
+        private Thread threadv4;
 		private Thread threadv6;
 		private bool running;
 		private readonly UdpManager.OnMessageReceived onMessageReceived;
 
 		private static readonly IPAddress multicastAddressV6 = IPAddress.Parse(MULTICAST_GROUP_I_PV6);
-		private static readonly bool pv6Support;
+		private static readonly bool ipv6Support;
 		private const int SOCKET_RECEIVE_POLL_TIME = 100000;
 		private const int SOCKET_SEND_POLL_TIME = 5000;
 
-		public UdpEndPoint LocalEndPoint
-		{
-			get { return this.localEndPoint; }
-		}
+        public UdpEndPoint LocalEndPoint { get; private set; }
 
-		static UdpSocket()
+        static UdpSocket()
 		{
 			try
 			{
 				//Unity3d .NET 2.0 throws exception.
-				pv6Support = Socket.OSSupportsIPv6;
+				ipv6Support = Socket.OSSupportsIPv6;
 			}
 			catch
 			{
-				pv6Support = false;
+				ipv6Support = false;
 			}
 		}
 
@@ -83,17 +79,16 @@ namespace ReliableUdp
 					if (ex.SocketErrorCode == SocketError.ConnectionReset ||
 						 ex.SocketErrorCode == SocketError.MessageSize)
 					{
-						// Factory.Get<IUdpLogger>().Log($"Ignored Error code {ex.SocketErrorCode} with execption {ex}.");
+						System.Diagnostics.Debug.WriteLine($"Ignored Error code {ex.SocketErrorCode} with execption {ex}.");
 						continue;
 					}
 
-					// Factory.Get<IUdpLogger>().Log($"Error code {ex.SocketErrorCode} with execption {ex}.");
+					System.Diagnostics.Debug.WriteLine($"Error code {ex.SocketErrorCode} with execption {ex}.");
 					this.onMessageReceived(null, 0, (int)ex.SocketErrorCode, bufferNetEndPoint);
 					continue;
 				}
 
-				//All ok!
-				// Factory.Get<IUdpLogger>().Log($"Received data from {bufferNetEndPoint} with result {result}.");
+				System.Diagnostics.Debug.WriteLine($"Received data from {bufferNetEndPoint} with result {result}.");
 				this.onMessageReceived(receiveBuffer, result, 0, bufferNetEndPoint);
 			}
 		}
@@ -105,12 +100,12 @@ namespace ReliableUdp
 			this.udpSocketv4.Blocking = false;
 			this.udpSocketv4.ReceiveBufferSize = SOCKET_BUFFER_SIZE;
 			this.udpSocketv4.SendBufferSize = SOCKET_BUFFER_SIZE;
+
 			this.udpSocketv4.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.IpTimeToLive, SOCKET_TTL);
 			if (reuseAddress)
 				this.udpSocketv4.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-#if !NETCORE
-			this.udpSocketv4.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, true);
-#endif
+
+            this.udpSocketv4.DontFragment = true;
 
 			try
 			{
@@ -118,14 +113,14 @@ namespace ReliableUdp
 			}
 			catch (SocketException ex)
 			{
-				// Factory.Get<IUdpLogger>().Log($"Broadcast error {ex}.");
-			}
+                System.Diagnostics.Debug.WriteLine($"Broadcast error {ex}.");
+            }
 
 			if (!BindSocket(this.udpSocketv4, new IPEndPoint(IPAddress.Any, port)))
 			{
 				return false;
 			}
-			this.localEndPoint = new UdpEndPoint((IPEndPoint)this.udpSocketv4.LocalEndPoint);
+			this.LocalEndPoint = new UdpEndPoint((IPEndPoint)this.udpSocketv4.LocalEndPoint);
 
 			this.running = true;
 			this.threadv4 = new Thread(ReceiveLogic);
@@ -134,11 +129,11 @@ namespace ReliableUdp
 			this.threadv4.Start(this.udpSocketv4);
 
 			//Check IPv6 support
-			if (!pv6Support)
+			if (!ipv6Support)
 				return true;
 
 			//Use one port for two sockets
-			port = this.localEndPoint.Port;
+			port = this.LocalEndPoint.Port;
 
 			this.udpSocketv6 = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
 		    this.udpSocketv6.IOControl(unchecked((int) SIO_UDP_CONNRESET), new byte[] {Convert.ToByte(false)}, null);
@@ -148,9 +143,9 @@ namespace ReliableUdp
 			if (reuseAddress)
 				this.udpSocketv6.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
-			if (BindSocket(this.udpSocketv6, new IPEndPoint(IPAddress.IPv6Any, port)))
+            if (BindSocket(this.udpSocketv6, new IPEndPoint(IPAddress.IPv6Any, port)))
 			{
-				this.localEndPoint = new UdpEndPoint((IPEndPoint)this.udpSocketv6.LocalEndPoint);
+				this.LocalEndPoint = new UdpEndPoint((IPEndPoint)this.udpSocketv6.LocalEndPoint);
 
 				try
 				{
@@ -178,11 +173,11 @@ namespace ReliableUdp
 			try
 			{
 				socket.Bind(ep);
-				// Factory.Get<IUdpLogger>().Log($"Successfully binded to port {((IPEndPoint)socket.LocalEndPoint).Port}.");
+				System.Diagnostics.Debug.WriteLine($"Successfully binded to port {((IPEndPoint)socket.LocalEndPoint).Port}.");
 			}
 			catch (SocketException ex)
 			{
-				// Factory.Get<IUdpLogger>().Log($"Bind error {ex}");
+				System.Diagnostics.Debug.WriteLine($"Bind error {ex}");
 
 				if (ex.SocketErrorCode == SocketError.AddressFamilyNotSupported)
 				{
@@ -200,7 +195,7 @@ namespace ReliableUdp
 				int result = this.udpSocketv4.SendTo(data, offset, size, SocketFlags.None, new IPEndPoint(IPAddress.Broadcast, port));
 				if (result <= 0)
 					return false;
-				if (pv6Support)
+				if (ipv6Support)
 				{
 					result = this.udpSocketv6.SendTo(data, offset, size, SocketFlags.None, new IPEndPoint(multicastAddressV6, port));
 					if (result <= 0)
@@ -209,7 +204,7 @@ namespace ReliableUdp
 			}
 			catch (Exception ex)
 			{
-				// Factory.Get<IUdpLogger>().Log(ex.ToString());
+				System.Diagnostics.Debug.WriteLine(ex.ToString());
 				return false;
 			}
 			return true;
@@ -226,21 +221,21 @@ namespace ReliableUdp
 						return -1;
 					result = this.udpSocketv4.SendTo(data, offset, size, SocketFlags.None, remoteEndPoint.EndPoint);
 				}
-				else if (pv6Support)
+				else if (ipv6Support)
 				{
 					if (!this.udpSocketv6.Poll(SOCKET_SEND_POLL_TIME, SelectMode.SelectWrite))
 						return -1;
 					result = this.udpSocketv6.SendTo(data, offset, size, SocketFlags.None, remoteEndPoint.EndPoint);
 				}
 
-				// Factory.Get<IUdpLogger>().Log($"Send packet to {remoteEndPoint.EndPoint} with result {result}");
+				System.Diagnostics.Debug.WriteLine($"Send packet to {remoteEndPoint.EndPoint} with result {result}");
 				return result;
 			}
 			catch (SocketException ex)
 			{
 				if (ex.SocketErrorCode != SocketError.MessageSize)
 				{
-					// Factory.Get<IUdpLogger>().Log(ex.ToString());
+					System.Diagnostics.Debug.WriteLine(ex.ToString());
 				}
 
 				errorCode = (int)ex.SocketErrorCode;
@@ -248,7 +243,7 @@ namespace ReliableUdp
 			}
 			catch (Exception ex)
 			{
-				// Factory.Get<IUdpLogger>().Log(ex.ToString());
+				System.Diagnostics.Debug.WriteLine(ex.ToString());
 				return -1;
 			}
 		}

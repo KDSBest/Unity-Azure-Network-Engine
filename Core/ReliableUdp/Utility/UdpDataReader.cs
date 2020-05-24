@@ -1,11 +1,9 @@
+using System;
+using System.Text;
+
 namespace ReliableUdp.Utility
 {
-	using System;
-	using System.Text;
-
-	using ReliableUdp.Packet;
-
-	public class UdpDataReader
+    public class UdpDataReader
 	{
 		protected byte[] _data;
 		protected int _position;
@@ -323,14 +321,6 @@ namespace ReliableUdp.Utility
 			Buffer.BlockCopy(this._data, this._position, outgoingData, 0, this.AvailableBytes);
 			this._position = this._data.Length;
 			return outgoingData;
-		}
-
-		public T GetPacket<T>() where T : IProtocolPacket, new()
-		{
-			T packet = new T();
-			packet.Deserialize(this);
-
-			return packet;
 		}
 
 		public void GetBytes(byte[] destination)

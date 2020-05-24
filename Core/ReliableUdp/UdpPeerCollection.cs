@@ -1,9 +1,8 @@
+using System.Collections.Generic;
+
 namespace ReliableUdp
 {
-	using System;
-	using System.Collections.Generic;
-
-	public class UdpPeerCollection
+    public class UdpPeerCollection
 	{
 		public int MaxPeers { get; set; }
 

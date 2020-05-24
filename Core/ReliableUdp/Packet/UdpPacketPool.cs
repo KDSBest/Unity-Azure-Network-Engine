@@ -1,12 +1,12 @@
+using System;
+using System.Collections.Generic;
+
+using ReliableUdp.Const;
+using ReliableUdp.Enums;
+using ReliableUdp.Utility;
+
 namespace ReliableUdp.Packet
 {
-	using System;
-	using System.Collections.Generic;
-
-	using ReliableUdp.Const;
-	using ReliableUdp.Enums;
-	using ReliableUdp.Utility;
-
 	public class UdpPacketPool
 	{
 		private readonly Stack<UdpPacket> pool;
@@ -30,7 +30,6 @@ namespace ReliableUdp.Packet
 			return packet;
 		}
 
-		//Get packet just for read
 		public UdpPacket GetAndRead(byte[] data, int start, int count)
 		{
 			UdpPacket packet = null;
@@ -43,7 +42,6 @@ namespace ReliableUdp.Packet
 			}
 			if (packet == null)
 			{
-				//allocate new packet of max size or bigger
 				packet = new UdpPacket(Mtu.MaxPacketSize);
 			}
 			if (!packet.FromBytes(data, start, count))
@@ -54,7 +52,6 @@ namespace ReliableUdp.Packet
 			return packet;
 		}
 
-		//Get packet with size
 		public UdpPacket Get(PacketType type, int size)
 		{
 			UdpPacket packet = null;
@@ -71,13 +68,13 @@ namespace ReliableUdp.Packet
 			}
 			if (packet == null)
 			{
-				//allocate new packet of max size or bigger
 				packet = new UdpPacket(size > Mtu.MaxPacketSize ? size : Mtu.MaxPacketSize);
 			}
 			else
 			{
 				Array.Clear(packet.RawData, 0, size);
 			}
+
 			packet.Type = type;
 			packet.Size = size;
 			return packet;
@@ -87,11 +84,9 @@ namespace ReliableUdp.Packet
 		{
 			if (packet.Size > Mtu.MaxPacketSize)
 			{
-				//Dont pool big packets. Save memory
 				return;
 			}
 
-			//Clean fragmented flag
 			packet.IsFragmented = false;
 			lock (this.pool)
 			{

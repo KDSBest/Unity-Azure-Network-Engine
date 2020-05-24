@@ -1,8 +1,8 @@
-﻿namespace ReliableUdp
-{
-	using ReliableUdp.Enums;
-	using ReliableUdp.Utility;
+﻿using ReliableUdp.Enums;
+using ReliableUdp.Utility;
 
+namespace ReliableUdp
+{
 	public interface IUdpEventListener
 	{
 		UdpManager UdpManager { get; set; }

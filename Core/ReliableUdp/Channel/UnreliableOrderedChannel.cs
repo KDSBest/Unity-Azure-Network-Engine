@@ -1,11 +1,10 @@
 using ReliableUdp.Utility;
+using ReliableUdp.Enums;
+using ReliableUdp.Packet;
+using System.Collections.Concurrent;
 
 namespace ReliableUdp.Channel
 {
-	using ReliableUdp.Enums;
-	using ReliableUdp.Packet;
-    using System.Collections.Concurrent;
-
     public class UnreliableOrderedChannel : IUnreliableOrderedChannel
 	{
 		private SequenceNumber localSequence = new SequenceNumber(0);

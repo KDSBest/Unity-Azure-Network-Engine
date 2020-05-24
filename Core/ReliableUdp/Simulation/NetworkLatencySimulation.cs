@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace ReliableUdp.Simulation
 {
-	public class NetworkLatencySimulation : INetworkSimulation
+    public class NetworkLatencySimulation : INetworkSimulation
 	{
 		private readonly Random randomGenerator = new Random();
 		private readonly List<IncomingData> incomingData = new List<IncomingData>();

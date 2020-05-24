@@ -1,7 +1,7 @@
-﻿namespace ReliableUdp.Channel
-{
-	using ReliableUdp.Packet;
+﻿using ReliableUdp.Packet;
 
+namespace ReliableUdp.Channel
+{
 	public interface IChannel
 	{
 		void AddToQueue(UdpPacket packet);

@@ -15,7 +15,7 @@ namespace ReliableUdp.PacketHandler
 
 		public void AddIncomingAck(UdpPeer peer, UdpPacket p, ChannelType channel)
 		{
-			// Factory.Get<IUdpLogger>().Log($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
+			System.Diagnostics.Debug.WriteLine($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
 
 			ushort packetFragId = p.FragmentId;
 			IncomingFragments incomingFragments;
@@ -32,7 +32,7 @@ namespace ReliableUdp.PacketHandler
 
 			if (p.FragmentPart >= fragments.Length || fragments[p.FragmentPart] != null)
 			{
-				// Factory.Get<IUdpLogger>().Log($"Invalid fragment packet.");
+				System.Diagnostics.Debug.WriteLine($"Invalid fragment packet.");
 				return;
 			}
 
@@ -48,7 +48,7 @@ namespace ReliableUdp.PacketHandler
 				return;
 			}
 
-			// Factory.Get<IUdpLogger>().Log($"Received all fragments.");
+			System.Diagnostics.Debug.WriteLine($"Received all fragments.");
 			UdpPacket resultingPacket = peer.GetPacketFromPool(p.Type, incomingFragments.TotalSize);
 
 			int resultingPacketOffset = resultingPacket.GetHeaderSize();
@@ -75,7 +75,7 @@ namespace ReliableUdp.PacketHandler
 
 		public void AddIncomingPacket(UdpPeer peer, UdpPacket p, ChannelType channel)
 		{
-			// Factory.Get<IUdpLogger>().Log($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
+			System.Diagnostics.Debug.WriteLine($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
 
 			ushort packetFragId = p.FragmentId;
 			IncomingFragments incomingFragments;
@@ -90,7 +90,7 @@ namespace ReliableUdp.PacketHandler
 			if (p.FragmentPart >= fragments.Length || fragments[p.FragmentPart] != null)
 			{
 				peer.Recycle(p);
-				// Factory.Get<IUdpLogger>().Log($"Invalid fragment packet.");
+				System.Diagnostics.Debug.WriteLine($"Invalid fragment packet.");
 				return;
 			}
 
@@ -106,7 +106,7 @@ namespace ReliableUdp.PacketHandler
 				return;
 			}
 
-			// Factory.Get<IUdpLogger>().Log($"Received all fragments.");
+			System.Diagnostics.Debug.WriteLine($"Received all fragments.");
 			UdpPacket resultingPacket = peer.GetPacketFromPool(p.Type, incomingFragments.TotalSize);
 
 			int resultingPacketOffset = resultingPacket.GetHeaderSize();
@@ -140,17 +140,16 @@ namespace ReliableUdp.PacketHandler
 			int lastPacketSize = length % packetDataSize;
 			int totalPackets = fullPacketsCount + (lastPacketSize == 0 ? 0 : 1);
 
-			// Factory.Get<IUdpLogger>().Log(string.Format("FragmentSend:\n" +
-					//	  " MTU: {0}\n" +
-					//	  " headerSize: {1}\n" +
-					//	  " packetFullSize: {2}\n" +
-					//	  " packetDataSize: {3}\n" +
-					//	  " fullPacketsCount: {4}\n" +
-					//	  " lastPacketSize: {5}\n" +
-					//	  " totalPackets: {6}",
-				 //peer.PacketMtuHandler.Mtu, headerSize, packetFullSize, packetDataSize, fullPacketsCount, lastPacketSize, totalPackets));
+            System.Diagnostics.Debug.WriteLine($"FragmentSend:\r\n" +
+                          $" MTU: {peer.PacketMtuHandler.Mtu}\n" +
+                          $" headerSize: {headerSize}\n" +
+                          $" packetFullSize: {packetFullSize}\n" +
+                          $" packetDataSize: {packetDataSize}\n" +
+                          $" fullPacketsCount: {fullPacketsCount}\n" +
+                          $" lastPacketSize: {lastPacketSize}\n" +
+                          $" totalPackets: {totalPackets}");
 
-			if (totalPackets > ushort.MaxValue)
+            if (totalPackets > ushort.MaxValue)
 			{
 				throw new Exception("Too many fragments: " + totalPackets + " > " + ushort.MaxValue);
 			}

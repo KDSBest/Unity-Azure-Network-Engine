@@ -1,9 +1,9 @@
+using System;
+
+using ReliableUdp.Packet;
+
 namespace ReliableUdp.Channel
 {
-	using System;
-
-	using ReliableUdp.Packet;
-
 	public class PendingPacket
 	{
 		public UdpPacket Packet;

@@ -1,7 +1,7 @@
+using System.Runtime.InteropServices;
+
 namespace ReliableUdp.BitUtility
 {
-	using System.Runtime.InteropServices;
-
 	[StructLayout(LayoutKind.Explicit)]
 	public struct ConverterHelperDouble
 	{

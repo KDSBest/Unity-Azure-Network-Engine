@@ -1,7 +1,7 @@
+using ReliableUdp.Packet;
+
 namespace ReliableUdp.PacketHandler
 {
-	using ReliableUdp.Packet;
-
 	public class IncomingFragments
 	{
 		public UdpPacket[] Fragments;

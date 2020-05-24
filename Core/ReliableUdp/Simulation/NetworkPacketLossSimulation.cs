@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace ReliableUdp.Simulation
 {
-	public class NetworkPacketLossSimulation : INetworkSimulation
+    public class NetworkPacketLossSimulation : INetworkSimulation
 	{
 		public int PacketLossChance { get; set; }
 

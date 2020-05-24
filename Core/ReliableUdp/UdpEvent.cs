@@ -1,9 +1,8 @@
 using ReliableUdp.Utility;
+using ReliableUdp.Enums;
 
 namespace ReliableUdp
 {
-	using ReliableUdp.Enums;
-
 	public sealed class UdpEvent
 	{
 		public UdpPeer Peer;

@@ -1,14 +1,13 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Threading;
+
+using ReliableUdp;
+using ReliableUdp.Enums;
+using ReliableUdp.Utility;
 
 namespace CoreTest
 {
-	using System.Threading;
-
-	using ReliableUdp;
-	using ReliableUdp.Enums;
-	using ReliableUdp.Utility;
-
 	[TestClass]
 	public class EchoMessagesTest
 	{

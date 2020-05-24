@@ -1,26 +1,20 @@
 ﻿using System;
-using System.Linq;
+using System.Threading;
 
 namespace ReliableUdp
 {
-	using System.Threading;
-
-	public sealed class UdpThread
+    public sealed class UdpThread
 	{
 		private Thread thread;
 
 		private readonly Action callback;
 
 		public int SleepTime;
-		private bool running;
-		private readonly string name;
+        private readonly string name;
 
-		public bool IsRunning
-		{
-			get { return this.running; }
-		}
+        public bool IsRunning { get; private set; }
 
-		public UdpThread(string name, int sleepTime, Action callback)
+        public UdpThread(string name, int sleepTime, Action callback)
 		{
 			this.callback = callback;
 			SleepTime = sleepTime;
@@ -29,9 +23,9 @@ namespace ReliableUdp
 
 		public void Start()
 		{
-			if (this.running)
+			if (this.IsRunning)
 				return;
-			this.running = true;
+			this.IsRunning = true;
 			this.thread = new Thread(ThreadLogic)
 			{
 				Name = this.name,
@@ -42,16 +36,16 @@ namespace ReliableUdp
 
 		public void Stop()
 		{
-			if (!this.running)
+			if (!this.IsRunning)
 				return;
-			this.running = false;
+			this.IsRunning = false;
 
 			this.thread.Join();
 		}
 
 		private void ThreadLogic()
 		{
-			while (this.running)
+			while (this.IsRunning)
 			{
 				this.callback();
 				Thread.Sleep(SleepTime);
