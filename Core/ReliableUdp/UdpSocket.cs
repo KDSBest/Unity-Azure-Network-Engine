@@ -27,6 +27,7 @@ namespace ReliableUdp
         private static readonly bool ipv6Support;
         private const int SOCKET_RECEIVE_POLL_TIME = 100000;
         private const int SOCKET_SEND_POLL_TIME = 5000;
+        private const int NO_DATA_WAIT_TIME = 50;
 
         public UdpEndPoint LocalEndPoint { get; private set; }
 
@@ -63,6 +64,7 @@ namespace ReliableUdp
                 {
                     if (socket.Available == 0 || !socket.Poll(SOCKET_RECEIVE_POLL_TIME, SelectMode.SelectRead))
                     {
+                        Thread.Sleep(NO_DATA_WAIT_TIME);
                         continue;
                     }
 

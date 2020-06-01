@@ -12,7 +12,7 @@ namespace ReliableUdp.PacketHandler
 		public const int PROTOCOL_ID = 2;
 
 		private int connectAttempts;
-		private int connectTimer;
+		private int connectTimer = 0;
 
         public ConnectionState ConnectionState { get; private set; } = ConnectionState.InProgress;
 
@@ -100,7 +100,6 @@ namespace ReliableUdp.PacketHandler
 
 			if (this.ConnectionState == ConnectionState.InProgress)
 			{
-				this.connectTimer += deltaTime;
 				if (this.connectTimer > peer.Settings.ReconnectDelay)
 				{
 					this.connectTimer = 0;
@@ -113,8 +112,9 @@ namespace ReliableUdp.PacketHandler
 
 					this.SendConnectRequest(peer);
 				}
+                this.connectTimer += deltaTime;
 
-				return false;
+                return false;
 			}
 
 			return true;

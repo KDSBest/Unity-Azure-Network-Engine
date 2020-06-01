@@ -29,8 +29,6 @@ namespace ReliableUdp
         private readonly UdpPeerCollection peers;
         private readonly int maxConnections;
 
-        public int UpdateSleepTime = 15;
-
         public UdpSettings Settings = new UdpSettings();
 
         public ulong PacketsSent { get; private set; }
@@ -67,7 +65,7 @@ namespace ReliableUdp
         /// <param name="listener">Network events listener</param>
         /// <param name="maxConnections">Maximum connections (incoming and outcoming)</param>
         /// <param name="connectKey">Application key (must be same with remote host for establish connection)</param>
-        public UdpManager(IUdpEventListener listener, string connectKey, int maxConnections = int.MaxValue, int updateSleepTime = 15)
+        public UdpManager(IUdpEventListener listener, string connectKey, int maxConnections = int.MaxValue)
         {
             this.updateThread = new Thread(this.Update) { Name = "UpdateThread", IsBackground = true };
             this.socket = new UdpSocket(this.HandlePacket);
@@ -79,7 +77,6 @@ namespace ReliableUdp
             this.Settings.ConnectKey = connectKey;
             this.peers = new UdpPeerCollection(maxConnections);
             this.maxConnections = maxConnections;
-            this.UpdateSleepTime = updateSleepTime;
 
             listener.UdpManager = this;
         }
@@ -180,7 +177,7 @@ namespace ReliableUdp
         {
             while (IsRunning)
             {
-                var startTime = DateTime.UtcNow.Ticks;
+                var startTime = DateTime.UtcNow;
 
                 if (this.Settings.NetworkSimulation != null)
                 {
@@ -189,7 +186,7 @@ namespace ReliableUdp
 
                 this.UpdatePeers();
 
-                int sleepTime = UpdateSleepTime - (int)((DateTime.UtcNow.Ticks - startTime) / TimeSpan.TicksPerMillisecond);
+                int sleepTime = this.Settings.UpdateSleepTime - (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
                 if (sleepTime > 0)
                 {
                     Thread.Sleep(sleepTime);
@@ -222,7 +219,7 @@ namespace ReliableUdp
                     }
                     else
                     {
-                        udpPeer.Update(UpdateSleepTime);
+                        udpPeer.Update(this.Settings.UpdateSleepTime);
                     }
                 }
             }
