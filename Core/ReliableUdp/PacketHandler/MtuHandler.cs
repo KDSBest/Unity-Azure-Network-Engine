@@ -4,7 +4,6 @@ using ReliableUdp.Const;
 using ReliableUdp.Enums;
 using ReliableUdp.Packet;
 using System;
-using System.Diagnostics;
 
 namespace ReliableUdp.PacketHandler
 {
@@ -33,7 +32,9 @@ namespace ReliableUdp.PacketHandler
             int endMtuCheck = BitConverter.ToInt32(packet.RawData, packet.Size - 4);
             if (packet.Size != recvMtu || recvMtu != endMtuCheck || recvMtu > Const.Mtu.MaxPacketSize)
             {
-                Debug.WriteLine($"Corrupted MTU Package Recv MTU: {recvMtu} End MTU: {endMtuCheck} Packet Size: {packet.Size}");
+#if UDP_DEBUGGING
+                System.Diagnostics.Debug.WriteLine($"Corrupted MTU Package Recv MTU: {recvMtu} End MTU: {endMtuCheck} Packet Size: {packet.Size}");
+#endif
                 return;
             }
 
@@ -41,7 +42,9 @@ namespace ReliableUdp.PacketHandler
             {
                 this.mtuCheckAttempts = 0;
 
-                Debug.WriteLine($"MTU check. Resend {packet.RawData[1]}");
+#if UDP_DEBUGGING
+                System.Diagnostics.Debug.WriteLine($"MTU check. Resend {packet.RawData[1]}");
+#endif
                 packet.Type = PacketType.MtuOk;
                 peer.SendPacket(packet);
             }
@@ -59,7 +62,9 @@ namespace ReliableUdp.PacketHandler
                 if (this.mtuIdx == Const.Mtu.PossibleValues.Length - 1)
                     this.finishMtu = true;
 
-                Debug.WriteLine($"MTU is set to {this.Mtu}");
+#if UDP_DEBUGGING
+                System.Diagnostics.Debug.WriteLine($"MTU is set to {this.Mtu}");
+#endif
             }
         }
 

@@ -79,11 +79,15 @@ namespace ReliableUdp
                     if (ex.SocketErrorCode == SocketError.ConnectionReset ||
                          ex.SocketErrorCode == SocketError.MessageSize)
                     {
+#if UDP_DEBUGGING
                         System.Diagnostics.Debug.WriteLine($"Ignored Error code {ex.SocketErrorCode} with execption {ex}.");
+#endif
                         continue;
                     }
 
+#if UDP_DEBUGGING
                     System.Diagnostics.Debug.WriteLine($"Error code {ex.SocketErrorCode} with execption {ex}.");
+#endif
                     lock (receiveLock)
                     {
                         this.onMessageReceived(null, 0, (int)ex.SocketErrorCode, bufferNetEndPoint);
@@ -91,7 +95,9 @@ namespace ReliableUdp
                     continue;
                 }
 
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Received data from {bufferNetEndPoint} with result {result}.");
+#endif
                 lock (receiveLock)
                 {
                     this.onMessageReceived(receiveBuffer, result, 0, bufferNetEndPoint);
@@ -124,7 +130,9 @@ namespace ReliableUdp
             }
             catch (SocketException ex)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Broadcast error {ex}.");
+#endif
             }
 
             IPAddress ipv4 = IPAddress.Any;
@@ -207,11 +215,15 @@ namespace ReliableUdp
             try
             {
                 socket.Bind(ep);
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Successfully binded to port {((IPEndPoint)socket.LocalEndPoint).Port}.");
+#endif
             }
             catch (SocketException ex)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Bind error {ex}");
+#endif
 
                 if (ex.SocketErrorCode == SocketError.AddressFamilyNotSupported)
                 {
@@ -238,7 +250,9 @@ namespace ReliableUdp
             }
             catch (Exception ex)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine(ex.ToString());
+#endif
                 return false;
             }
             return true;
@@ -262,7 +276,9 @@ namespace ReliableUdp
                     result = this.udpSocketv6.SendTo(data, offset, size, SocketFlags.None, remoteEndPoint.EndPoint);
                 }
 
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Send packet to {remoteEndPoint.EndPoint} with result {result}");
+#endif
                 return result;
             }
             catch (SocketException ex)
@@ -274,7 +290,9 @@ namespace ReliableUdp
 
                 if (ex.SocketErrorCode != SocketError.MessageSize)
                 {
+#if UDP_DEBUGGING
                     System.Diagnostics.Debug.WriteLine(ex.ToString());
+#endif
                 }
 
                 errorCode = (int)ex.SocketErrorCode;
@@ -282,7 +300,9 @@ namespace ReliableUdp
             }
             catch (Exception ex)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine(ex.ToString());
+#endif
                 return -1;
             }
         }
