@@ -196,7 +196,7 @@ namespace ReliableUdp.Channel
 
 			if (packetFound)
 			{
-				currentPacket.TimeStamp = DateTime.Now;
+				currentPacket.TimeStamp = DateTime.UtcNow;
 				this.peer.SendRawData(currentPacket.Packet);
 #if UDP_DEBUGGING
 				System.Diagnostics.Debug.WriteLine($"Sended.");
