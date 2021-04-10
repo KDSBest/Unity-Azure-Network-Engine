@@ -12,7 +12,7 @@ namespace ReliableUdp.PacketHandler
 		public const int PROTOCOL_ID = 2;
 
 		private int connectAttempts;
-		private int connectTimer;
+		private int connectTimer = 0;
 
         public ConnectionState ConnectionState { get; private set; } = ConnectionState.InProgress;
 
@@ -37,7 +37,9 @@ namespace ReliableUdp.PacketHandler
 				this.SendConnectAccept(peer);
 			}
 
+#if UDP_DEBUGGING
 			System.Diagnostics.Debug.WriteLine($"Connection Id is {this.ConnectId}.");
+#endif
 		}
 
 		private void SendConnectRequest(UdpPeer peer)
@@ -74,7 +76,9 @@ namespace ReliableUdp.PacketHandler
 
 			peer.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 			this.ConnectionState = ConnectionState.Connected;
+#if UDP_DEBUGGING
 			System.Diagnostics.Debug.WriteLine("Received Connection accepted.");
+#endif
 			return true;
 		}
 
@@ -86,7 +90,9 @@ namespace ReliableUdp.PacketHandler
 				this.ConnectId = newId;
 			}
 
+#if UDP_DEBUGGING
 			System.Diagnostics.Debug.WriteLine($"Connect Request Last Id {this.ConnectId} NewId {newId} EP {peer.EndPoint}");
+#endif
 			this.SendConnectAccept(peer);
 			peer.Recycle(packet);
 		}
@@ -100,7 +106,6 @@ namespace ReliableUdp.PacketHandler
 
 			if (this.ConnectionState == ConnectionState.InProgress)
 			{
-				this.connectTimer += deltaTime;
 				if (this.connectTimer > peer.Settings.ReconnectDelay)
 				{
 					this.connectTimer = 0;
@@ -113,8 +118,9 @@ namespace ReliableUdp.PacketHandler
 
 					this.SendConnectRequest(peer);
 				}
+                this.connectTimer += deltaTime;
 
-				return false;
+                return false;
 			}
 
 			return true;

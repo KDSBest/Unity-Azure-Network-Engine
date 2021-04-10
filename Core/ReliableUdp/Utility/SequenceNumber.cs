@@ -51,10 +51,10 @@
 			return a;
 		}
 
-		public static SequenceNumber operator -(SequenceNumber a, SequenceNumber b)
+		public static int operator -(SequenceNumber a, SequenceNumber b)
 		{
 			int val = ((a.Value - b.Value + MAX_SEQUENCE + MAX_SEQUENCE_HALF) % MAX_SEQUENCE - MAX_SEQUENCE_HALF);
-			return new SequenceNumber(val);
+			return val;
 		}
 	}
 }

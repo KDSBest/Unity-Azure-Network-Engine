@@ -27,6 +27,7 @@ namespace ReliableUdp
         private static readonly bool ipv6Support;
         private const int SOCKET_RECEIVE_POLL_TIME = 100000;
         private const int SOCKET_SEND_POLL_TIME = 5000;
+        private const int NO_DATA_WAIT_TIME = 50;
 
         public UdpEndPoint LocalEndPoint { get; private set; }
 
@@ -63,6 +64,7 @@ namespace ReliableUdp
                 {
                     if (socket.Available == 0 || !socket.Poll(SOCKET_RECEIVE_POLL_TIME, SelectMode.SelectRead))
                     {
+                        Thread.Sleep(NO_DATA_WAIT_TIME);
                         continue;
                     }
 
@@ -77,11 +79,15 @@ namespace ReliableUdp
                     if (ex.SocketErrorCode == SocketError.ConnectionReset ||
                          ex.SocketErrorCode == SocketError.MessageSize)
                     {
+#if UDP_DEBUGGING
                         System.Diagnostics.Debug.WriteLine($"Ignored Error code {ex.SocketErrorCode} with execption {ex}.");
+#endif
                         continue;
                     }
 
+#if UDP_DEBUGGING
                     System.Diagnostics.Debug.WriteLine($"Error code {ex.SocketErrorCode} with execption {ex}.");
+#endif
                     lock (receiveLock)
                     {
                         this.onMessageReceived(null, 0, (int)ex.SocketErrorCode, bufferNetEndPoint);
@@ -89,7 +95,9 @@ namespace ReliableUdp
                     continue;
                 }
 
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Received data from {bufferNetEndPoint} with result {result}.");
+#endif
                 lock (receiveLock)
                 {
                     this.onMessageReceived(receiveBuffer, result, 0, bufferNetEndPoint);
@@ -100,7 +108,9 @@ namespace ReliableUdp
         public bool Bind(string ipv4Address, string ipv6Address, int port, bool reuseAddress, int socketBufferSize)
         {
             this.udpSocketv4 = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            this.udpSocketv4.IOControl(unchecked((int)SIO_UDP_CONNRESET), new byte[] { Convert.ToByte(false) }, null);
+
+            SetConnReset(this.udpSocketv4);
+
             this.udpSocketv4.Blocking = false;
             this.udpSocketv4.ReceiveBufferSize = socketBufferSize;
             this.udpSocketv4.SendBufferSize = socketBufferSize;
@@ -122,7 +132,9 @@ namespace ReliableUdp
             }
             catch (SocketException ex)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Broadcast error {ex}.");
+#endif
             }
 
             IPAddress ipv4 = IPAddress.Any;
@@ -150,7 +162,7 @@ namespace ReliableUdp
             port = this.LocalEndPoint.Port;
 
             this.udpSocketv6 = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-            this.udpSocketv6.IOControl(unchecked((int)SIO_UDP_CONNRESET), new byte[] { Convert.ToByte(false) }, null);
+            SetConnReset(this.udpSocketv6);
             this.udpSocketv6.Blocking = false;
             this.udpSocketv6.ReceiveBufferSize = socketBufferSize;
             this.udpSocketv6.SendBufferSize = socketBufferSize;
@@ -200,16 +212,32 @@ namespace ReliableUdp
             return true;
         }
 
+        private void SetConnReset(Socket socket)
+        {
+            try
+            {
+                socket.IOControl(unchecked((int)SIO_UDP_CONNRESET), new byte[] { Convert.ToByte(false) }, null);
+            }
+            catch (Exception)
+            {
+                // will fail on none win os
+            }
+        }
+
         private bool BindSocket(Socket socket, IPEndPoint ep)
         {
             try
             {
                 socket.Bind(ep);
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Successfully binded to port {((IPEndPoint)socket.LocalEndPoint).Port}.");
+#endif
             }
             catch (SocketException ex)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Bind error {ex}");
+#endif
 
                 if (ex.SocketErrorCode == SocketError.AddressFamilyNotSupported)
                 {
@@ -236,7 +264,9 @@ namespace ReliableUdp
             }
             catch (Exception ex)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine(ex.ToString());
+#endif
                 return false;
             }
             return true;
@@ -260,7 +290,9 @@ namespace ReliableUdp
                     result = this.udpSocketv6.SendTo(data, offset, size, SocketFlags.None, remoteEndPoint.EndPoint);
                 }
 
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Send packet to {remoteEndPoint.EndPoint} with result {result}");
+#endif
                 return result;
             }
             catch (SocketException ex)
@@ -272,7 +304,9 @@ namespace ReliableUdp
 
                 if (ex.SocketErrorCode != SocketError.MessageSize)
                 {
+#if UDP_DEBUGGING
                     System.Diagnostics.Debug.WriteLine(ex.ToString());
+#endif
                 }
 
                 errorCode = (int)ex.SocketErrorCode;
@@ -280,7 +314,9 @@ namespace ReliableUdp
             }
             catch (Exception ex)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine(ex.ToString());
+#endif
                 return -1;
             }
         }

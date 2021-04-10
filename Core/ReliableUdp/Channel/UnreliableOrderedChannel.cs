@@ -37,7 +37,7 @@ namespace ReliableUdp.Channel
 
 		public void ProcessPacket(UdpPacket packet)
 		{
-			if ((packet.Sequence - this.remoteSequence).Value > 0)
+			if ((packet.Sequence - this.remoteSequence) > 0)
 			{
 				this.remoteSequence = packet.Sequence;
 				this.peer.AddIncomingPacket(packet, ChannelType.UnreliableOrdered);

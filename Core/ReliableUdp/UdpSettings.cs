@@ -6,7 +6,7 @@ namespace ReliableUdp
 	{
 		public int DisconnectTimeout = 5000;
 
-		public int ReconnectDelay = 500;
+		public int ReconnectDelay = 5000;
 
 		public int MaxConnectAttempts = 10;
 
@@ -15,5 +15,7 @@ namespace ReliableUdp
 		public INetworkSimulation NetworkSimulation = null;
 
 		public string ConnectKey = "kdsbest";
-	}
+
+        public int UpdateSleepTime = 50;
+    }
 }

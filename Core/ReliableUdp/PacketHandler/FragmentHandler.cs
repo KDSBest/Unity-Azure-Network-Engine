@@ -15,7 +15,9 @@ namespace ReliableUdp.PacketHandler
 
 		public void AddIncomingAck(UdpPeer peer, UdpPacket p, ChannelType channel)
 		{
+#if UDP_DEBUGGING
 			System.Diagnostics.Debug.WriteLine($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
+#endif
 
 			ushort packetFragId = p.FragmentId;
 			IncomingFragments incomingFragments;
@@ -32,7 +34,9 @@ namespace ReliableUdp.PacketHandler
 
 			if (p.FragmentPart >= fragments.Length || fragments[p.FragmentPart] != null)
 			{
+#if UDP_DEBUGGING
 				System.Diagnostics.Debug.WriteLine($"Invalid fragment packet.");
+#endif
 				return;
 			}
 
@@ -48,7 +52,9 @@ namespace ReliableUdp.PacketHandler
 				return;
 			}
 
+#if UDP_DEBUGGING
 			System.Diagnostics.Debug.WriteLine($"Received all fragments.");
+#endif
 			UdpPacket resultingPacket = peer.GetPacketFromPool(p.Type, incomingFragments.TotalSize);
 
 			int resultingPacketOffset = resultingPacket.GetHeaderSize();
@@ -75,8 +81,9 @@ namespace ReliableUdp.PacketHandler
 
 		public void AddIncomingPacket(UdpPeer peer, UdpPacket p, ChannelType channel)
 		{
+#if UDP_DEBUGGING
 			System.Diagnostics.Debug.WriteLine($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
-
+#endif
 			ushort packetFragId = p.FragmentId;
 			IncomingFragments incomingFragments;
 			if (!this.holdedFragments.TryGetValue(packetFragId, out incomingFragments))
@@ -90,8 +97,10 @@ namespace ReliableUdp.PacketHandler
 			if (p.FragmentPart >= fragments.Length || fragments[p.FragmentPart] != null)
 			{
 				peer.Recycle(p);
+#if UDP_DEBUGGING
 				System.Diagnostics.Debug.WriteLine($"Invalid fragment packet.");
-				return;
+#endif
+                return;
 			}
 
 			fragments[p.FragmentPart] = p;
@@ -106,7 +115,9 @@ namespace ReliableUdp.PacketHandler
 				return;
 			}
 
+#if UDP_DEBUGGING
 			System.Diagnostics.Debug.WriteLine($"Received all fragments.");
+#endif
 			UdpPacket resultingPacket = peer.GetPacketFromPool(p.Type, incomingFragments.TotalSize);
 
 			int resultingPacketOffset = resultingPacket.GetHeaderSize();
@@ -140,6 +151,7 @@ namespace ReliableUdp.PacketHandler
 			int lastPacketSize = length % packetDataSize;
 			int totalPackets = fullPacketsCount + (lastPacketSize == 0 ? 0 : 1);
 
+#if UDP_DEBUGGING
             System.Diagnostics.Debug.WriteLine($"FragmentSend:\r\n" +
                           $" MTU: {peer.PacketMtuHandler.Mtu}\n" +
                           $" headerSize: {headerSize}\n" +
@@ -148,6 +160,7 @@ namespace ReliableUdp.PacketHandler
                           $" fullPacketsCount: {fullPacketsCount}\n" +
                           $" lastPacketSize: {lastPacketSize}\n" +
                           $" totalPackets: {totalPackets}");
+#endif
 
             if (totalPackets > ushort.MaxValue)
 			{

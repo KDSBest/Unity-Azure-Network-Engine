@@ -49,12 +49,14 @@ namespace ReliableUdp.NetworkStatistic
 				return 0;
 			return this.flowModes[flowMode].StartRtt;
 		}
-		public void ResetFlowTimer(int deltaTime)
+		public void UpdateFlowTimer(int deltaTime)
 		{
 			this.flowTimer += deltaTime;
 			if (this.flowTimer >= FLOW_UPDATE_TIME)
 			{
+#if UDP_DEBUGGING
 				System.Diagnostics.Debug.WriteLine($"Reset flow timer, sended packets {this.sendedPacketsCount}");
+#endif
 				this.sendedPacketsCount = 0;
 				this.flowTimer = 0;
 			}

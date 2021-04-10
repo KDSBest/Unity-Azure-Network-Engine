@@ -29,8 +29,6 @@ namespace ReliableUdp
         private readonly UdpPeerCollection peers;
         private readonly int maxConnections;
 
-        public int UpdateSleepTime = 15;
-
         public UdpSettings Settings = new UdpSettings();
 
         public ulong PacketsSent { get; private set; }
@@ -67,7 +65,7 @@ namespace ReliableUdp
         /// <param name="listener">Network events listener</param>
         /// <param name="maxConnections">Maximum connections (incoming and outcoming)</param>
         /// <param name="connectKey">Application key (must be same with remote host for establish connection)</param>
-        public UdpManager(IUdpEventListener listener, string connectKey, int maxConnections = int.MaxValue, int updateSleepTime = 15)
+        public UdpManager(IUdpEventListener listener, string connectKey, int maxConnections = int.MaxValue)
         {
             this.updateThread = new Thread(this.Update) { Name = "UpdateThread", IsBackground = true };
             this.socket = new UdpSocket(this.HandlePacket);
@@ -79,7 +77,6 @@ namespace ReliableUdp
             this.Settings.ConnectKey = connectKey;
             this.peers = new UdpPeerCollection(maxConnections);
             this.maxConnections = maxConnections;
-            this.UpdateSleepTime = updateSleepTime;
 
             listener.UdpManager = this;
         }
@@ -118,7 +115,9 @@ namespace ReliableUdp
             }
             if (errorCode == 10040)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"10040, datalen {length}");
+#endif
                 return false;
             }
 
@@ -143,7 +142,9 @@ namespace ReliableUdp
                 {
                     data = null;
                     count = 0;
+#if UDP_DEBUGGING
                     System.Diagnostics.Debug.WriteLine("Disconnect data size is more than MTU");
+#endif
                 }
 
                 var disconnectPacket = this.PacketPool.Get(PacketType.Disconnect, 8 + count);
@@ -180,7 +181,7 @@ namespace ReliableUdp
         {
             while (IsRunning)
             {
-                var startTime = DateTime.UtcNow.Ticks;
+                var startTime = DateTime.UtcNow;
 
                 if (this.Settings.NetworkSimulation != null)
                 {
@@ -189,7 +190,7 @@ namespace ReliableUdp
 
                 this.UpdatePeers();
 
-                int sleepTime = UpdateSleepTime - (int)((DateTime.UtcNow.Ticks - startTime) / TimeSpan.TicksPerMillisecond);
+                int sleepTime = this.Settings.UpdateSleepTime - (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
                 if (sleepTime > 0)
                 {
                     Thread.Sleep(sleepTime);
@@ -207,7 +208,9 @@ namespace ReliableUdp
                     if (udpPeer.ConnectionState == ConnectionState.Connected
                         && udpPeer.NetworkStatisticManagement.TimeSinceLastPacket > this.Settings.DisconnectTimeout)
                     {
+#if UDP_DEBUGGING
                         System.Diagnostics.Debug.WriteLine($"Disconnect by timeout {udpPeer.NetworkStatisticManagement.TimeSinceLastPacket} > {this.Settings.DisconnectTimeout}");
+#endif
                         this.CreateDisconnectEvent(udpPeer, DisconnectReason.Timeout, 0);
 
                         this.RemovePeerAt(i);
@@ -222,7 +225,7 @@ namespace ReliableUdp
                     }
                     else
                     {
-                        udpPeer.Update(UpdateSleepTime);
+                        udpPeer.Update(this.Settings.UpdateSleepTime);
                     }
                 }
             }
@@ -257,7 +260,9 @@ namespace ReliableUdp
             UdpPacket packet = this.PacketPool.GetAndRead(reusableBuffer, 0, count);
             if (packet == null)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Data Received but packet is null.");
+#endif
                 return;
             }
 
@@ -301,20 +306,26 @@ namespace ReliableUdp
                 int protoId = BitConverter.ToInt32(packet.RawData, 1);
                 if (protoId != ConnectionRequestHandler.PROTOCOL_ID)
                 {
+#if UDP_DEBUGGING
                     System.Diagnostics.Debug.WriteLine($"Peer connect rejected. Invalid Protocol Id.");
+#endif
                     return;
                 }
 
                 string peerKey = Encoding.UTF8.GetString(packet.RawData, 13, packet.Size - 13);
                 if (peerKey != this.Settings.ConnectKey)
                 {
+#if UDP_DEBUGGING
                     System.Diagnostics.Debug.WriteLine($"Peer connect rejected. Invalid key {peerKey}.");
+#endif
                     return;
                 }
 
                 long connectionId = BitConverter.ToInt64(packet.RawData, 5);
                 udpPeer = new UdpPeer(this, remoteEndPoint, connectionId);
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Received Peer connect request Id {udpPeer.ConnectId} EP {remoteEndPoint}.");
+#endif
 
                 this.PacketPool.Recycle(packet);
 
@@ -334,7 +345,9 @@ namespace ReliableUdp
 
             if (fromPeer != null)
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Received message.");
+#endif
                 this.CreateReceiveEvent(packet, channel, fromPeer);
             }
         }
@@ -344,7 +357,9 @@ namespace ReliableUdp
             UdpPeer fromPeer;
             if (this.peers.TryGetValue(remoteEndPoint, out fromPeer))
             {
+#if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Received ack message.");
+#endif
                 this.CreateReceiveAckEvent(packet, channel, fromPeer);
             }
         }
@@ -698,7 +713,7 @@ namespace ReliableUdp
             }
         }
 
-        #region Events
+#region Events
 
         private void CreateDisconnectEvent(UdpPeer peer, DisconnectReason reason, int socketErrorCode)
         {
@@ -836,7 +851,7 @@ namespace ReliableUdp
                 this.netEventsPool.Push(evt);
             }
         }
-        #endregion
+#endregion
     }
 
 }

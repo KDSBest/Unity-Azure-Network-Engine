@@ -56,7 +56,9 @@ namespace ReliableUdp.NetworkStatistic
 					this.goodRttCount = 0;
 					this.FlowManagement.CurrentFlowMode--;
 
+#if UDP_DEBUGGING
 					System.Diagnostics.Debug.WriteLine($"Increased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+#endif
 				}
 			}
 			else if (this.avgRtt > this.FlowManagement.GetStartRtt(this.FlowManagement.CurrentFlowMode))
@@ -65,7 +67,9 @@ namespace ReliableUdp.NetworkStatistic
 				if (this.FlowManagement.CurrentFlowMode < this.FlowManagement.GetMaxFlowMode())
 				{
 					this.FlowManagement.CurrentFlowMode++;
-					System.Diagnostics.Debug.WriteLine($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+#if UDP_DEBUGGING
+        			System.Diagnostics.Debug.WriteLine($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+#endif
 				}
 			}
 
@@ -75,7 +79,7 @@ namespace ReliableUdp.NetworkStatistic
 
 		public void Update(UdpPeer peer, int deltaTime, Action<UdpPeer, int> connectionLatencyUpdated)
 		{
-			this.FlowManagement.ResetFlowTimer(deltaTime);
+			this.FlowManagement.UpdateFlowTimer(deltaTime);
 			this.TimeSinceLastPacket += deltaTime;
 
 			this.rttResetTimer += deltaTime;

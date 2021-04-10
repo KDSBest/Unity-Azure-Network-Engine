@@ -1,8 +1,7 @@
-﻿using System;
-using System.Diagnostics;
-using ReliableUdp.Enums;
+﻿using ReliableUdp.Enums;
 using ReliableUdp.Packet;
 using ReliableUdp.Utility;
+using System.Diagnostics;
 
 namespace ReliableUdp.PacketHandler
 {
@@ -23,9 +22,11 @@ namespace ReliableUdp.PacketHandler
 
 		public void HandlePing(UdpPeer peer, UdpPacket packet)
 		{
-			if ((packet.Sequence - this.pongPaket.Sequence).Value > 0)
+			if ((packet.Sequence - this.pongPaket.Sequence) > 0)
 			{
-                Debug.WriteLine("Ping receive... Send Pong...");
+#if UDP_DEBUGGING
+                System.Diagnostics.Debug.WriteLine("Ping receive... Send Pong...");
+#endif
                 this.pongPaket.Sequence = packet.Sequence;
                 peer.SendRawData(this.pongPaket);
             }
@@ -40,7 +41,9 @@ namespace ReliableUdp.PacketHandler
                 stopwatch.Stop();
                 int rtt = (int)stopwatch.ElapsedMilliseconds;
                 peer.NetworkStatisticManagement.UpdateRoundTripTime(rtt);
-                Debug.WriteLine($"Ping {rtt}");
+#if UDP_DEBUGGING
+                System.Diagnostics.Debug.WriteLine($"Ping {rtt}");
+#endif
             }
 
             peer.Recycle(packet);
@@ -53,7 +56,9 @@ namespace ReliableUdp.PacketHandler
 			{
                 this.pingSendTimer = 0;
 
-                Debug.WriteLine("Send ping...");
+#if UDP_DEBUGGING
+                System.Diagnostics.Debug.WriteLine("Send ping...");
+#endif
                 if (stopwatch.IsRunning)
                     peer.NetworkStatisticManagement.UpdateRoundTripTime((int)stopwatch.ElapsedMilliseconds);
                 stopwatch.Restart();
