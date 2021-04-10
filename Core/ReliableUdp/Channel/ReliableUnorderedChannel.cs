@@ -89,33 +89,34 @@ namespace ReliableUdp.Channel
 #endif
 			int startByte = HeaderSize.SEQUENCED;
 
-			Monitor.Enter(this.pendingPackets);
-			for (int i = 0; i < this.windowSize; i++)
+			lock (this.pendingPackets)
 			{
-				ushort ackSequenceValue = (ushort)((packet.Sequence.Value + i) % SequenceNumber.MAX_SEQUENCE);
-				SequenceNumber ackSequence = new SequenceNumber(ackSequenceValue);
-				if ((ackSequence - this.localWindowStart) < 0)
+				for (int i = 0; i < this.windowSize; i++)
 				{
-					continue;
-				}
+					ushort ackSequenceValue = (ushort)((packet.Sequence.Value + i) % SequenceNumber.MAX_SEQUENCE);
+					SequenceNumber ackSequence = new SequenceNumber(ackSequenceValue);
+					if ((ackSequence - this.localWindowStart) < 0)
+					{
+						continue;
+					}
 
-				int currentByte = startByte + i / BITS_IN_BYTE;
-				int currentBit = i % BITS_IN_BYTE;
+					int currentByte = startByte + i / BITS_IN_BYTE;
+					int currentBit = i % BITS_IN_BYTE;
 
-				if ((acksData[currentByte] & (1 << currentBit)) == 0)
-				{
-					continue;
-				}
+					if ((acksData[currentByte] & (1 << currentBit)) == 0)
+					{
+						continue;
+					}
 
-				if (ackSequence == this.localWindowStart)
-				{
-					this.localWindowStart++;
-				}
+					if (ackSequence == this.localWindowStart)
+					{
+						this.localWindowStart++;
+					}
 
-				UdpPacket removed = this.pendingPackets[ackSequence.Value % this.windowSize].GetAndClear();
-				if (removed != null)
-				{
-					this.peer.AddIncomingAck(removed, ChannelType.Reliable);
+					UdpPacket removed = this.pendingPackets[ackSequence.Value % this.windowSize].GetAndClear();
+					if (removed != null)
+					{
+						this.peer.AddIncomingAck(removed, ChannelType.Reliable);
 #if UDP_DEBUGGING
 					System.Diagnostics.Debug.WriteLine($"Removing reliableInOrder ack: {ackSequence.Value} - true.");
 				}
@@ -123,9 +124,9 @@ namespace ReliableUdp.Channel
 				{
 					System.Diagnostics.Debug.WriteLine($"Removing reliableInOrder ack: {ackSequence.Value} - false.");
 #endif
+					}
 				}
 			}
-			Monitor.Exit(this.pendingPackets);
 		}
 
 		public void AddToQueue(UdpPacket packet)
@@ -163,46 +164,47 @@ namespace ReliableUdp.Channel
 		{
 			DateTime currentTime = DateTime.UtcNow;
 
-			Monitor.Enter(this.pendingPackets);
-			ProcessQueuedPackets();
-
-			PendingPacket currentPacket;
 			bool packetFound = false;
-			int startQueueIndex = this.queueIndex;
-			do
+			lock (this.pendingPackets)
 			{
-				currentPacket = this.pendingPackets[this.queueIndex];
-				if (currentPacket.Packet != null)
+				ProcessQueuedPackets();
+
+				PendingPacket currentPacket;
+				int startQueueIndex = this.queueIndex;
+				do
 				{
-					if (currentPacket.TimeStamp.HasValue)
+					currentPacket = this.pendingPackets[this.queueIndex];
+					if (currentPacket.Packet != null)
 					{
-						double packetHoldTime = (currentTime - currentPacket.TimeStamp.Value).TotalMilliseconds;
-						if (packetHoldTime > this.peer.NetworkStatisticManagement.ResendDelay)
+						if (currentPacket.TimeStamp.HasValue)
 						{
+							double packetHoldTime = (currentTime - currentPacket.TimeStamp.Value).TotalMilliseconds;
+							if (packetHoldTime > this.peer.NetworkStatisticManagement.ResendDelay)
+							{
 #if UDP_DEBUGGING
 							System.Diagnostics.Debug.WriteLine($"Resend: {(int)packetHoldTime} > {this.peer.NetworkStatisticManagement.ResendDelay}.");
 #endif
+								packetFound = true;
+							}
+						}
+						else
+						{
 							packetFound = true;
 						}
 					}
-					else
-					{
-						packetFound = true;
-					}
-				}
 
-				this.queueIndex = (this.queueIndex + 1) % this.windowSize;
-			} while (!packetFound && this.queueIndex != startQueueIndex);
+					this.queueIndex = (this.queueIndex + 1) % this.windowSize;
+				} while (!packetFound && this.queueIndex != startQueueIndex);
 
-			if (packetFound)
-			{
-				currentPacket.TimeStamp = DateTime.UtcNow;
-				this.peer.SendRawData(currentPacket.Packet);
+				if (packetFound)
+				{
+					currentPacket.TimeStamp = DateTime.UtcNow;
+					this.peer.SendRawData(currentPacket.Packet);
 #if UDP_DEBUGGING
 				System.Diagnostics.Debug.WriteLine($"Sended.");
 #endif
+				}
 			}
-			Monitor.Exit(this.pendingPackets);
 			return packetFound;
 		}
 
@@ -222,29 +224,30 @@ namespace ReliableUdp.Channel
 
 			byte[] data = acksPacket.RawData;
 
-			Monitor.Enter(this.outgoingAcks);
-			acksPacket.Sequence = this.remoteWindowStart;
-
-			int startAckIndex = this.remoteWindowStart.Value % this.windowSize;
-			int currentAckIndex = startAckIndex;
-			int currentBit = 0;
-			int currentByte = HeaderSize.SEQUENCED;
-			do
+			lock (this.outgoingAcks)
 			{
-				if (this.outgoingAcks[currentAckIndex])
-				{
-					data[currentByte] |= (byte)(1 << currentBit);
-				}
+				acksPacket.Sequence = this.remoteWindowStart;
 
-				currentBit++;
-				if (currentBit == BITS_IN_BYTE)
+				int startAckIndex = this.remoteWindowStart.Value % this.windowSize;
+				int currentAckIndex = startAckIndex;
+				int currentBit = 0;
+				int currentByte = HeaderSize.SEQUENCED;
+				do
 				{
-					currentByte++;
-					currentBit = 0;
-				}
-				currentAckIndex = (currentAckIndex + 1) % this.windowSize;
-			} while (currentAckIndex != startAckIndex);
-			Monitor.Exit(this.outgoingAcks);
+					if (this.outgoingAcks[currentAckIndex])
+					{
+						data[currentByte] |= (byte)(1 << currentBit);
+					}
+
+					currentBit++;
+					if (currentBit == BITS_IN_BYTE)
+					{
+						currentByte++;
+						currentBit = 0;
+					}
+					currentAckIndex = (currentAckIndex + 1) % this.windowSize;
+				} while (currentAckIndex != startAckIndex);
+			}
 
 			this.peer.SendRawData(acksPacket);
 			this.peer.Recycle(acksPacket);
@@ -286,31 +289,31 @@ namespace ReliableUdp.Channel
                 return;
 			}
 
-			Monitor.Enter(this.outgoingAcks);
-			if (relate >= this.windowSize)
+			lock (this.outgoingAcks)
 			{
-				int newWindowStart = (this.remoteWindowStart.Value + relate - this.windowSize + 1) % SequenceNumber.MAX_SEQUENCE;
-
-				while (this.remoteWindowStart.Value != newWindowStart)
+				if (relate >= this.windowSize)
 				{
-					this.outgoingAcks[this.remoteWindowStart.Value % this.windowSize] = false;
-					this.remoteWindowStart++;
+					int newWindowStart = (this.remoteWindowStart.Value + relate - this.windowSize + 1) % SequenceNumber.MAX_SEQUENCE;
+
+					while (this.remoteWindowStart.Value != newWindowStart)
+					{
+						this.outgoingAcks[this.remoteWindowStart.Value % this.windowSize] = false;
+						this.remoteWindowStart++;
+					}
 				}
-			}
 
-			this.mustSendAcks = true;
+				this.mustSendAcks = true;
 
-			if (this.outgoingAcks[packet.Sequence.Value % this.windowSize])
-			{
+				if (this.outgoingAcks[packet.Sequence.Value % this.windowSize])
+				{
 #if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine("Reliable in order duplicate.");
 #endif
-                Monitor.Exit(this.outgoingAcks);
-				return;
-			}
+					return;
+				}
 
-			this.outgoingAcks[packet.Sequence.Value % this.windowSize] = true;
-			Monitor.Exit(this.outgoingAcks);
+				this.outgoingAcks[packet.Sequence.Value % this.windowSize] = true;
+			}
 
 			if (packet.Sequence == this.remoteSequence)
 			{
