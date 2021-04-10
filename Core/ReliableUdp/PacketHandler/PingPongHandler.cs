@@ -1,6 +1,7 @@
 ﻿using ReliableUdp.Enums;
 using ReliableUdp.Packet;
 using ReliableUdp.Utility;
+using System;
 using System.Diagnostics;
 
 namespace ReliableUdp.PacketHandler
@@ -10,7 +11,7 @@ namespace ReliableUdp.PacketHandler
 		private int pingSendTimer = 0;
 		private UdpPacket pingPaket = new UdpPacket(PacketType.Ping, 0);
 		private UdpPacket pongPaket = new UdpPacket(PacketType.Pong, 0);
-		private readonly Stopwatch stopwatch = new Stopwatch();
+		private DateTime pingTime = DateTime.UtcNow;
 
 		public int PingInterval { get; set; }
 
@@ -38,10 +39,8 @@ namespace ReliableUdp.PacketHandler
 		{
 			if (packet.Sequence == pingPaket.Sequence)
 			{
-                stopwatch.Stop();
-                int rtt = (int)stopwatch.ElapsedMilliseconds;
+				int rtt = (int)(DateTime.UtcNow - pingTime).TotalMilliseconds;
                 peer.NetworkStatisticManagement.UpdateRoundTripTime(rtt);
-				stopwatch.Restart();
 #if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Ping {rtt}");
 #endif
@@ -60,11 +59,9 @@ namespace ReliableUdp.PacketHandler
 #if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine("Send ping...");
 #endif
-                if (stopwatch.IsRunning)
-                    peer.NetworkStatisticManagement.UpdateRoundTripTime((int)stopwatch.ElapsedMilliseconds);
-                stopwatch.Restart();
+				pingTime = DateTime.UtcNow;
 
-                pingPaket.Sequence++;
+				pingPaket.Sequence++;
                 peer.SendRawData(this.pingPaket);
 			}
 		}

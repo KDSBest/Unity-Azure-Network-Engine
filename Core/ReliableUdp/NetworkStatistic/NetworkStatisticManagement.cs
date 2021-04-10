@@ -42,7 +42,6 @@ namespace ReliableUdp.NetworkStatistic
 			this.rtt += roundTripTime;
 			this.rttCount++;
 			this.avgRtt = this.rtt / this.rttCount;
-
 			if (this.avgRtt < this.FlowManagement.GetStartRtt(this.FlowManagement.CurrentFlowMode - 1))
 			{
 				if (this.FlowManagement.CurrentFlowMode <= 0)
@@ -88,8 +87,8 @@ namespace ReliableUdp.NetworkStatistic
 				this.rttResetTimer = 0;
 				this.rtt = this.avgRtt;
 				this.Ping = this.avgRtt;
-				connectionLatencyUpdated(peer, this.Ping);
 				this.rttCount = 1;
+				connectionLatencyUpdated(peer, this.Ping);
 			}
 		}
 	}

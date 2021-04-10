@@ -562,11 +562,11 @@ namespace ReliableUdp
         /// </summary>
         /// <param name="address">Server IP or hostname</param>
         /// <param name="port">Server Port</param>
-        public void Connect(string address, int port)
+        public UdpPeer Connect(string address, int port)
         {
             //Create target endpoint
             UdpEndPoint ep = new UdpEndPoint(address, port);
-            Connect(ep);
+            return Connect(ep);
         }
 
         /// <summary>
