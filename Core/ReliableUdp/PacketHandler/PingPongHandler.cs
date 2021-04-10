@@ -9,7 +9,7 @@ namespace ReliableUdp.PacketHandler
 	{
 		private int pingSendTimer = 0;
 		private UdpPacket pingPaket = new UdpPacket(PacketType.Ping, 0);
-		private UdpPacket pongPaket = new UdpPacket(PacketType.Ping, 0);
+		private UdpPacket pongPaket = new UdpPacket(PacketType.Pong, 0);
 		private readonly Stopwatch stopwatch = new Stopwatch();
 
 		public int PingInterval { get; set; }
@@ -41,12 +41,13 @@ namespace ReliableUdp.PacketHandler
                 stopwatch.Stop();
                 int rtt = (int)stopwatch.ElapsedMilliseconds;
                 peer.NetworkStatisticManagement.UpdateRoundTripTime(rtt);
+				stopwatch.Restart();
 #if UDP_DEBUGGING
                 System.Diagnostics.Debug.WriteLine($"Ping {rtt}");
 #endif
-            }
+			}
 
-            peer.Recycle(packet);
+			peer.Recycle(packet);
 		}
 
 		public void Update(UdpPeer peer, int deltaTime)
