@@ -2,11 +2,10 @@
 using ReliableUdp.Packet;
 using ReliableUdp.Utility;
 using System;
-using System.Diagnostics;
 
 namespace ReliableUdp.PacketHandler
 {
-    public class PingPongHandler
+	public class PingPongHandler
 	{
 		private int pingSendTimer = 0;
 		private UdpPacket pingPaket = new UdpPacket(PacketType.Ping, 0);

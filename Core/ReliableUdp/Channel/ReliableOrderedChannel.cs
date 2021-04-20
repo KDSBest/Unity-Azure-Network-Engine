@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 
 using ReliableUdp.Const;
 using ReliableUdp.Enums;
@@ -10,7 +9,7 @@ using ReliableUdp.Utility;
 
 namespace ReliableUdp.Channel
 {
-    public sealed class ReliableOrderedChannel : IReliableOrderedChannel
+	public sealed class ReliableOrderedChannel : IReliableOrderedChannel
 	{
 		private readonly Queue<UdpPacket> outgoingPackets;
 		private readonly bool[] outgoingAcks;
