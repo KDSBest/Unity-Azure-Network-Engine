@@ -38,7 +38,7 @@ namespace ReliableUdp.PacketHandler
 			}
 
 #if UDP_DEBUGGING
-			System.Diagnostics.Debug.WriteLine($"Connection Id is {this.ConnectId}.");
+			Console.WriteLine($"Connection Id is {this.ConnectId}.");
 #endif
 		}
 
@@ -77,7 +77,7 @@ namespace ReliableUdp.PacketHandler
 			peer.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 			this.ConnectionState = ConnectionState.Connected;
 #if UDP_DEBUGGING
-			System.Diagnostics.Debug.WriteLine("Received Connection accepted.");
+			Console.WriteLine("Received Connection accepted.");
 #endif
 			return true;
 		}
@@ -91,7 +91,7 @@ namespace ReliableUdp.PacketHandler
 			}
 
 #if UDP_DEBUGGING
-			System.Diagnostics.Debug.WriteLine($"Connect Request Last Id {this.ConnectId} NewId {newId} EP {peer.EndPoint}");
+			Console.WriteLine($"Connect Request Last Id {this.ConnectId} NewId {newId} EP {peer.EndPoint}");
 #endif
 			this.SendConnectAccept(peer);
 			peer.Recycle(packet);

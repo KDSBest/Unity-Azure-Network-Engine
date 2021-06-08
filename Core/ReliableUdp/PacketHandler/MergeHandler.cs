@@ -51,7 +51,7 @@ namespace ReliableUdp.PacketHandler
 				this.mergeCount++;
 
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine($"Merged: {mergePos}/{peer.PacketMtuHandler.Mtu - 2}, count: {mergeCount}");
+                Console.WriteLine($"Merged: {mergePos}/{peer.PacketMtuHandler.Mtu - 2}, count: {mergeCount}");
 #endif
                 return true;
 			}
@@ -66,7 +66,7 @@ namespace ReliableUdp.PacketHandler
 				if (this.mergeCount > 1)
 				{
 #if UDP_DEBUGGING
-					System.Diagnostics.Debug.WriteLine($"Send merged {this.mergePos}, count {this.mergeCount}");
+					Console.WriteLine($"Send merged {this.mergePos}, count {this.mergeCount}");
 #endif
                     peer.SendRaw(this.mergeData.RawData, 0, HeaderSize.DEFAULT + this.mergePos, peer.EndPoint);
 				}

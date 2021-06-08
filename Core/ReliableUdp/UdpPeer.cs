@@ -137,7 +137,7 @@ namespace ReliableUdp
 		{
             bool result = true;
 #if UDP_DEBUGGING
-			System.Diagnostics.Debug.WriteLine($"Packet type {packet.Type}");
+			Console.WriteLine($"Packet type {packet.Type}");
 #endif
 			switch (packet.Type)
 			{
@@ -203,7 +203,7 @@ namespace ReliableUdp
 			this.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 
 #if UDP_DEBUGGING
-			System.Diagnostics.Debug.WriteLine($"Packet type {packet.Type}");
+			Console.WriteLine($"Packet type {packet.Type}");
 #endif
             switch (packet.Type)
 			{
@@ -249,7 +249,7 @@ namespace ReliableUdp
 
 				default:
 #if UDP_DEBUGGING
-					System.Diagnostics.Debug.WriteLine($"Error! Unexpected packet type {packet.Type}");
+					Console.WriteLine($"Error! Unexpected packet type {packet.Type}");
 #endif
 					break;
 			}
@@ -263,7 +263,7 @@ namespace ReliableUdp
 			}
 
 #if UDP_DEBUGGING
-			System.Diagnostics.Debug.WriteLine($"Sending Packet {packet.Type}");
+			Console.WriteLine($"Sending Packet {packet.Type}");
 #endif
 			return this.UdpManager.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint);
 		}

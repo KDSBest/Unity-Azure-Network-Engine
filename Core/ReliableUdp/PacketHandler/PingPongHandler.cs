@@ -25,7 +25,7 @@ namespace ReliableUdp.PacketHandler
 			if ((packet.Sequence - this.pongPaket.Sequence) > 0)
 			{
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine("Ping receive... Send Pong...");
+                Console.WriteLine("Ping receive... Send Pong...");
 #endif
                 this.pongPaket.Sequence = packet.Sequence;
                 peer.SendRawData(this.pongPaket);
@@ -41,7 +41,7 @@ namespace ReliableUdp.PacketHandler
 				int rtt = (int)(DateTime.UtcNow - pingTime).TotalMilliseconds;
                 peer.NetworkStatisticManagement.UpdateRoundTripTime(rtt);
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine($"Ping {rtt}");
+                Console.WriteLine($"Ping {rtt}");
 #endif
 			}
 
@@ -56,7 +56,7 @@ namespace ReliableUdp.PacketHandler
                 this.pingSendTimer = 0;
 
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine("Send ping...");
+                Console.WriteLine("Send ping...");
 #endif
 				pingTime = DateTime.UtcNow;
 

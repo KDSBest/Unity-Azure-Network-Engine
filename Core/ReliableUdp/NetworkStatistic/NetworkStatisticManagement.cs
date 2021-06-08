@@ -56,7 +56,7 @@ namespace ReliableUdp.NetworkStatistic
 					this.FlowManagement.CurrentFlowMode--;
 
 #if UDP_DEBUGGING
-					System.Diagnostics.Debug.WriteLine($"Increased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+					Console.WriteLine($"Increased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
 #endif
 				}
 			}
@@ -67,7 +67,7 @@ namespace ReliableUdp.NetworkStatistic
 				{
 					this.FlowManagement.CurrentFlowMode++;
 #if UDP_DEBUGGING
-        			System.Diagnostics.Debug.WriteLine($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
+        			Console.WriteLine($"Decreased flow speed, RTT {this.avgRtt}, PPS {this.FlowManagement.GetPacketsPerSecond(this.FlowManagement.CurrentFlowMode)}");
 #endif
 				}
 			}

@@ -80,13 +80,13 @@ namespace ReliableUdp
                          ex.SocketErrorCode == SocketError.MessageSize)
                     {
 #if UDP_DEBUGGING
-                        System.Diagnostics.Debug.WriteLine($"Ignored Error code {ex.SocketErrorCode} with execption {ex}.");
+                        Console.WriteLine($"Ignored Error code {ex.SocketErrorCode} with execption {ex}.");
 #endif
                         continue;
                     }
 
 #if UDP_DEBUGGING
-                    System.Diagnostics.Debug.WriteLine($"Error code {ex.SocketErrorCode} with execption {ex}.");
+                    Console.WriteLine($"Error code {ex.SocketErrorCode} with execption {ex}.");
 #endif
                     lock (receiveLock)
                     {
@@ -96,7 +96,7 @@ namespace ReliableUdp
                 }
 
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine($"Received data from {bufferNetEndPoint} with result {result}.");
+                Console.WriteLine($"Received data from {bufferNetEndPoint} with result {result}.");
 #endif
                 lock (receiveLock)
                 {
@@ -133,7 +133,7 @@ namespace ReliableUdp
             catch (SocketException ex)
             {
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine($"Broadcast error {ex}.");
+                Console.WriteLine($"Broadcast error {ex}.");
 #endif
             }
 
@@ -234,13 +234,13 @@ namespace ReliableUdp
             {
                 socket.Bind(ep);
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine($"Successfully binded to port {((IPEndPoint)socket.LocalEndPoint).Port}.");
+                Console.WriteLine($"Successfully binded to port {((IPEndPoint)socket.LocalEndPoint).Port}.");
 #endif
             }
             catch (SocketException ex)
             {
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine($"Bind error {ex}");
+                Console.WriteLine($"Bind error {ex}");
 #endif
 
                 if (ex.SocketErrorCode == SocketError.AddressFamilyNotSupported)
@@ -269,7 +269,7 @@ namespace ReliableUdp
             catch (Exception ex)
             {
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine(ex.ToString());
+                Console.WriteLine(ex.ToString());
 #endif
                 return false;
             }
@@ -295,7 +295,7 @@ namespace ReliableUdp
                 }
 
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine($"Send packet to {remoteEndPoint.EndPoint} with result {result}");
+                Console.WriteLine($"Send packet to {remoteEndPoint.EndPoint} with result {result}");
 #endif
                 return result;
             }
@@ -309,7 +309,7 @@ namespace ReliableUdp
                 if (ex.SocketErrorCode != SocketError.MessageSize)
                 {
 #if UDP_DEBUGGING
-                    System.Diagnostics.Debug.WriteLine(ex.ToString());
+                    Console.WriteLine(ex.ToString());
 #endif
                 }
 
@@ -319,7 +319,7 @@ namespace ReliableUdp
             catch (Exception ex)
             {
 #if UDP_DEBUGGING
-                System.Diagnostics.Debug.WriteLine(ex.ToString());
+                Console.WriteLine(ex.ToString());
 #endif
                 return -1;
             }
