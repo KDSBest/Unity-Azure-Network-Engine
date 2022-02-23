@@ -25,7 +25,7 @@ namespace ReliableUdp.PacketHandler
 
         public void ProcessMtuPacket(UdpPeer peer, UdpPacket packet)
         {
-            if (packet.Size == 5 || packet.RawData[1] >= Const.Mtu.PossibleValues.Length)
+            if (packet.Size == 5)
                 return;
 
             int recvMtu = BitConverter.ToInt32(packet.RawData, 1);

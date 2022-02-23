@@ -10,39 +10,27 @@ namespace ReliableUdp.Utility
 		protected byte[] _data;
 		protected int Position;
 
-		private int maxLength;
 		private readonly bool autoResize;
 
-		public UdpDataWriter()
+		public UdpDataWriter() : this(true)
 		{
-			this.maxLength = 64;
-			this._data = new byte[this.maxLength];
-			this.autoResize = true;
 		}
 
-		public UdpDataWriter(bool autoResize)
+		public UdpDataWriter(bool autoResize) : this(autoResize, 64)
 		{
-			this.maxLength = 64;
-			this._data = new byte[this.maxLength];
-			this.autoResize = autoResize;
 		}
 
 		public UdpDataWriter(bool autoResize, int initialSize)
 		{
-			this.maxLength = initialSize;
-			this._data = new byte[this.maxLength];
+			this._data = new byte[initialSize];
 			this.autoResize = autoResize;
 		}
 
 		public void ResizeIfNeed(int newSize)
 		{
-			if (this.maxLength < newSize)
+			if (_data.Length < newSize)
 			{
-				while (this.maxLength < newSize)
-				{
-					this.maxLength *= 2;
-				}
-				Array.Resize(ref this._data, this.maxLength);
+				Array.Resize(ref this._data, Math.Max(newSize, _data.Length * 2));
 			}
 		}
 
