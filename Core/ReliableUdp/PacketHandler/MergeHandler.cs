@@ -28,6 +28,7 @@ namespace ReliableUdp.PacketHandler
 				case PacketType.MtuOk:
 				case PacketType.Pong:
 				case PacketType.Disconnect:
+				case PacketType.Encrypted:
 					return false;
 				default:
 					return true;
@@ -82,7 +83,7 @@ namespace ReliableUdp.PacketHandler
 		public void ProcessPacket(UdpPeer peer, UdpPacket packet)
 		{
 			int pos = HeaderSize.DEFAULT;
-			while (pos < packet.Size)
+			while (pos + 2 < packet.Size)
 			{
 				ushort size = BitConverter.ToUInt16(packet.RawData, pos);
 				pos += 2;

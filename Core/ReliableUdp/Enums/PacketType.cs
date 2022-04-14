@@ -17,8 +17,8 @@ namespace ReliableUdp.Enums
 		MtuCheck = 12,
 		MtuOk = 13,
 		Merged = 14,
+		Encrypted = 15,
 
-        // NOTE: if you add types keep this the last one in value
-        PacketTypeTooHigh = 15
+        PacketTypeTooHigh = 16
 	}
 }

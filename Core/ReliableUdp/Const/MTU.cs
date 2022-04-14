@@ -5,12 +5,14 @@
         public static readonly int[] PossibleValues =
         {
             576 - HeaderSize.MAX_UDP,  //Internet Path MTU for X.25 (RFC 879)
+            1000 - HeaderSize.MAX_UDP,
             1200 - HeaderSize.MAX_UDP, //Often used by consoles and default router configs
             1400 - HeaderSize.MAX_UDP, //Often used by consoles and default router configs
             1460 - HeaderSize.MAX_UDP, //google cloud
             1472 - HeaderSize.MAX_UDP, //VPN
             1492 - HeaderSize.MAX_UDP, //Ethernet with LLC and SNAP, PPPoE (RFC 1042)
             1500 - HeaderSize.MAX_UDP, //Ethernet II (RFC 1191)
+            1600 - HeaderSize.MAX_UDP,
             4352 - HeaderSize.MAX_UDP, //FDDI
             4464 - HeaderSize.MAX_UDP, //Token ring
             7981 - HeaderSize.MAX_UDP  //WLAN

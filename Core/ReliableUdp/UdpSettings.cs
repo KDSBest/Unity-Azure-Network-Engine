@@ -1,3 +1,4 @@
+using ReliableUdp.Encryption;
 using ReliableUdp.Simulation;
 
 namespace ReliableUdp
@@ -14,8 +15,8 @@ namespace ReliableUdp
 
 		public INetworkSimulation NetworkSimulation = null;
 
-		public string ConnectKey = "kdsbest";
-
         public int UpdateSleepTime = 50;
-    }
+
+		public byte[] Cert = null;
+	}
 }

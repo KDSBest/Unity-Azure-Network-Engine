@@ -12,6 +12,7 @@ using ReliableUdp.Packet;
 using ReliableUdp.Utility;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using ReliableUdp.Encryption;
 
 namespace ReliableUdp
 {
@@ -66,7 +67,7 @@ namespace ReliableUdp
         /// <param name="listener">Network events listener</param>
         /// <param name="maxConnections">Maximum connections (incoming and outcoming)</param>
         /// <param name="connectKey">Application key (must be same with remote host for establish connection)</param>
-        public UdpManager(IUdpEventListener listener, string connectKey, int maxConnections = int.MaxValue)
+        public UdpManager(IUdpEventListener listener, int maxConnections = int.MaxValue)
         {
             this.updateThread = new Thread(this.Update) { Name = "UpdateThread", IsBackground = true };
             this.socket = new UdpSocket(this.HandlePacket);
@@ -75,7 +76,6 @@ namespace ReliableUdp
             this.netEventsPool = new Stack<UdpEvent>();
             this.PacketPool = new UdpPacketPool();
 
-            this.Settings.ConnectKey = connectKey;
             this.peers = new UdpPeerCollection(maxConnections);
             this.maxConnections = maxConnections;
 
@@ -87,44 +87,67 @@ namespace ReliableUdp
             this.CreateLatencyUpdateEvent(fromPeer, latency);
         }
 
-        public bool SendRawAndRecycle(UdpPacket packet, UdpEndPoint remoteEndPoint)
+        public bool SendRawAndRecycle(UdpPacket packet, UdpEndPoint remoteEndPoint, PacketEncryptionSystem packetEncryptionSystem)
         {
-            var result = SendRaw(packet.RawData, 0, packet.Size, remoteEndPoint);
+            var result = SendRaw(packet.RawData, 0, packet.Size, remoteEndPoint, packetEncryptionSystem);
             this.PacketPool.Recycle(packet);
             return result;
         }
 
-        public bool SendRaw(byte[] message, int start, int length, UdpEndPoint remoteEndPoint)
-        {
-            if (!IsRunning)
-                return false;
+        public bool SendRaw(byte[] message, int start, int length, UdpEndPoint remoteEndPoint, PacketEncryptionSystem packetEncryptionSystem)
+		{
+			if (!IsRunning)
+				return false;
 
-            int errorCode = 0;
-            bool result = this.socket.SendTo(message, start, length, remoteEndPoint, ref errorCode) > 0;
+			int errorCode = 0;
 
-            //10040 message to long... need to check
-            //10065 no route to host
-            if (errorCode != 0 && errorCode != 10040 && errorCode != 10065)
-            {
+			bool result = SocketSend(message, start, length, remoteEndPoint, ref errorCode, packetEncryptionSystem);
+
+			//10040 message to long... need to check
+			//10065 no route to host
+			if (errorCode != 0 && errorCode != 10040 && errorCode != 10065)
+			{
 				if (this.peers.TryGetValue(remoteEndPoint, out UdpPeer fromPeer))
 				{
 					DisconnectPeer(fromPeer, DisconnectReason.SocketSendError, errorCode, false, null, 0, 0);
 				}
 				this.CreateErrorEvent(remoteEndPoint, errorCode);
-                return false;
-            }
-            if (errorCode == 10040)
-            {
+				return false;
+			}
+			if (errorCode == 10040)
+			{
 #if UDP_DEBUGGING
                 Console.WriteLine($"10040, datalen {length}");
 #endif
-                return false;
+				return false;
+			}
+
+			PacketsSent++;
+			BytesSent += (uint)length;
+
+			return result;
+		}
+
+		private bool SocketSend(byte[] message, int start, int length, UdpEndPoint remoteEndPoint, ref int errorCode, PacketEncryptionSystem packetEncryptionSystem)
+		{
+            if(packetEncryptionSystem == null)
+			{
+                return this.socket.SendTo(message, start, length, remoteEndPoint, ref errorCode) > 0;
             }
 
-            PacketsSent++;
-            BytesSent += (uint)length;
+            byte[] data = new byte[length + 1];
+            Array.Copy(message, start, data, 0, length);
 
-            return result;
+            if (packetEncryptionSystem != null && packetEncryptionSystem.IsInitialized)
+            {
+                data = packetEncryptionSystem.EncryptAes(data);
+            }
+
+            byte[] sendBuffer = new byte[data.Length + 1];
+            sendBuffer[0] = (byte)PacketType.Encrypted;
+            Array.Copy(data, 0, sendBuffer, 1, data.Length);
+
+            return this.socket.SendTo(sendBuffer, 0, sendBuffer.Length, remoteEndPoint, ref errorCode) > 0;
         }
 
         private void DisconnectPeer(
@@ -153,7 +176,7 @@ namespace ReliableUdp
                 {
                     Buffer.BlockCopy(data, start, disconnectPacket.RawData, 9, count);
                 }
-                SendRawAndRecycle(disconnectPacket, peer.EndPoint);
+                SendRawAndRecycle(disconnectPacket, peer.EndPoint, peer.PacketEncryptionSystem);
             }
             this.CreateDisconnectEvent(peer, reason, socketErrorCode);
             RemovePeer(peer.EndPoint);
@@ -243,7 +266,9 @@ namespace ReliableUdp
                 }
 
                 if (receivePacket)
+                {
                     DataReceived(data, length, remoteEndPoint);
+                }
             }
             else
             {
@@ -266,18 +291,37 @@ namespace ReliableUdp
                 return;
             }
 
-            if (packet.Type == PacketType.UnconnectedMessage)
-            {
-                this.CreateReceiveUnconnectedEvent(remoteEndPoint, packet, count);
-                return;
-            }
-
             UdpPeer udpPeer;
 
             lock (this.peers)
             {
                 this.peers.TryGetValue(remoteEndPoint, out udpPeer);
             }
+
+            if (packet.Type == PacketType.Encrypted)
+			{
+                if (udpPeer != null && udpPeer.PacketEncryptionSystem != null && udpPeer.PacketEncryptionSystem.IsInitialized)
+                {
+                    byte[] decryptedPacket = udpPeer.PacketEncryptionSystem.DecryptAes(packet.GetPacketData());
+                    packet = this.PacketPool.GetAndRead(decryptedPacket, 0, decryptedPacket.Length);
+                }
+
+                if (packet == null)
+                {
+#if UDP_DEBUGGING
+                Console.WriteLine($"Data Decrypted but packet is null.");
+#endif
+                    return;
+                }
+            }
+
+
+            if (packet.Type == PacketType.UnconnectedMessage)
+            {
+                this.CreateReceiveUnconnectedEvent(remoteEndPoint, packet, count);
+                return;
+            }
+
             int peersCount = this.peers.Count;
 
             if (udpPeer != null)
@@ -312,17 +356,9 @@ namespace ReliableUdp
                     return;
                 }
 
-                string peerKey = Encoding.UTF8.GetString(packet.RawData, 13, packet.Size - 13);
-                if (peerKey != this.Settings.ConnectKey)
-                {
-#if UDP_DEBUGGING
-                    Console.WriteLine($"Peer connect rejected. Invalid key {peerKey}.");
-#endif
-                    return;
-                }
-
                 long connectionId = BitConverter.ToInt64(packet.RawData, 5);
-                udpPeer = new UdpPeer(this, remoteEndPoint, connectionId);
+                udpPeer = new UdpPeer(this, remoteEndPoint, connectionId, packet.GetEncKey());
+
 #if UDP_DEBUGGING
                 Console.WriteLine($"Received Peer connect request Id {udpPeer.ConnectId} EP {remoteEndPoint}.");
 #endif
@@ -536,7 +572,7 @@ namespace ReliableUdp
             if (!IsRunning)
                 return false;
             var packet = this.PacketPool.GetWithData(PacketType.UnconnectedMessage, message, start, length);
-            bool result = SendRawAndRecycle(packet, remoteEndPoint);
+            bool result = SendRawAndRecycle(packet, remoteEndPoint, null);
             return result;
         }
 
@@ -605,7 +641,7 @@ namespace ReliableUdp
                 {
                     var disconnectPacket = this.PacketPool.Get(PacketType.Disconnect, 8);
                     BitHelper.Write(disconnectPacket.RawData, 1, this.peers[i].ConnectId);
-                    SendRawAndRecycle(disconnectPacket, this.peers[i].EndPoint);
+                    SendRawAndRecycle(disconnectPacket, this.peers[i].EndPoint, this.peers[i].PacketEncryptionSystem);
                 }
             }
 

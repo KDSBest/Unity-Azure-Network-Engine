@@ -8,6 +8,7 @@ using ReliableUdp.Channel;
 using ReliableUdp.Enums;
 using ReliableUdp.Packet;
 using ReliableUdp.Utility;
+using ReliableUdp.Encryption;
 
 namespace ReliableUdp
 {
@@ -22,6 +23,7 @@ namespace ReliableUdp
 		public UdpEndPoint EndPoint { get; private set; }
 
 		public Dictionary<ChannelType, IChannel> Channels = new Dictionary<ChannelType, IChannel>();
+		public PacketEncryptionSystem PacketEncryptionSystem;
 
 		public NetworkStatisticManagement NetworkStatisticManagement { get; set; }
 		public PingPongHandler PacketPingPongHandler { get; set; }
@@ -52,19 +54,24 @@ namespace ReliableUdp
 			}
 		}
 
-		public UdpPeer(UdpManager peerListener, UdpEndPoint endPoint, long connectId)
+		public UdpPeer(UdpManager peerListener, UdpEndPoint endPoint, long connectId, byte[] encKey = null)
 		{
 			this.packetPool = peerListener.PacketPool;
 			this.UdpManager = peerListener;
 			this.EndPoint = endPoint;
+
+			if (this.Settings.Cert != null)
+			{
+				this.PacketEncryptionSystem = new PacketEncryptionSystem(this.Settings.Cert);
+			}
 
 			this.NetworkStatisticManagement = new NetworkStatisticManagement();
 			this.PacketPingPongHandler = new PingPongHandler();
 			this.PacketMtuHandler = new MtuHandler();
 			this.PacketMergeHandler = new MergeHandler();
 			this.PacketMergeHandler.Initialize(this);
-			this.PacketConnectionRequestHandler = new ConnectionRequestHandler();
-			this.PacketConnectionRequestHandler.Initialize(this, connectId);
+			this.PacketConnectionRequestHandler = new ConnectionRequestHandler(this.PacketEncryptionSystem);
+			this.PacketConnectionRequestHandler.Initialize(this, connectId, encKey);
 			this.PacketFragmentHandler = new FragmentHandler();
 
 			this.Channels.Add(ChannelType.Unreliable, new UnreliableUnorderedChannel());
@@ -265,12 +272,12 @@ namespace ReliableUdp
 #if UDP_DEBUGGING
 			Console.WriteLine($"Sending Packet {packet.Type}");
 #endif
-			return this.UdpManager.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint);
+			return this.UdpManager.SendRaw(packet.RawData, 0, packet.Size, this.EndPoint, this.PacketEncryptionSystem);
 		}
 
 		public bool SendRaw(byte[] message, int start, int length, UdpEndPoint endPoint)
 		{
-			return this.UdpManager.SendRaw(message, start, length, endPoint);
+			return this.UdpManager.SendRaw(message, start, length, endPoint, this.PacketEncryptionSystem);
 		}
 
 		public void Flush()
@@ -329,9 +336,14 @@ namespace ReliableUdp
 			return this.packetPool.Get(type, bytesCount);
 		}
 
+		public bool SendRawAndRecycleForceNoEncryption(UdpPacket packet, UdpEndPoint peerEndPoint)
+		{
+			return this.UdpManager.SendRawAndRecycle(packet, peerEndPoint, null);
+		}
+
 		public bool SendRawAndRecycle(UdpPacket packet, UdpEndPoint peerEndPoint)
 		{
-			return this.UdpManager.SendRawAndRecycle(packet, peerEndPoint);
+			return this.UdpManager.SendRawAndRecycle(packet, peerEndPoint, PacketEncryptionSystem);
 		}
 
 		public UdpPacket GetAndRead(byte[] packetRawData, int pos, ushort size)

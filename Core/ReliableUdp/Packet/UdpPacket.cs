@@ -10,8 +10,8 @@ namespace ReliableUdp.Packet
 	public class UdpPacket
 	{
 		public const int SIZE_LIMIT = ushort.MaxValue - HeaderSize.MAX_UDP;
-        public const byte FRAGMENTED_BIT = 0x80;
-        public const byte PACKET_TYPE_MASK = 0x7F;
+		public const byte FRAGMENTED_BIT = 0x80;
+		public const byte PACKET_TYPE_MASK = 0x7F;
 
 		public PacketType Type
 		{
@@ -64,32 +64,32 @@ namespace ReliableUdp.Packet
 			this.Size = 0;
 		}
 
-        public UdpPacket(PacketType type, int size)
-        {
-            size += GetHeaderSize(type);
-            this.RawData = new byte[size];
-            this.Type = type;
-            this.Size = size;
-        }
-
-        public static int GetHeaderSize(PacketType type)
+		public UdpPacket(PacketType type, int size)
 		{
-            switch (type)
-            {
-                case PacketType.ReliableOrdered:
-                case PacketType.Reliable:
-                case PacketType.UnreliableOrdered:
-                case PacketType.Ping:
-                case PacketType.Pong:
-                case PacketType.AckReliable:
-                case PacketType.AckReliableOrdered:
-                    return HeaderSize.SEQUENCED;
-            }
+			size += GetHeaderSize(type);
+			this.RawData = new byte[size];
+			this.Type = type;
+			this.Size = size;
+		}
 
-            return HeaderSize.DEFAULT;
-        }
+		public static int GetHeaderSize(PacketType type)
+		{
+			switch (type)
+			{
+				case PacketType.ReliableOrdered:
+				case PacketType.Reliable:
+				case PacketType.UnreliableOrdered:
+				case PacketType.Ping:
+				case PacketType.Pong:
+				case PacketType.AckReliable:
+				case PacketType.AckReliableOrdered:
+					return HeaderSize.SEQUENCED;
+			}
 
-        public int GetHeaderSize()
+			return HeaderSize.DEFAULT;
+		}
+
+		public int GetHeaderSize()
 		{
 			return GetHeaderSize(this.Type);
 		}
@@ -121,6 +121,20 @@ namespace ReliableUdp.Packet
 			this.Size = packetSize;
 			return true;
 		}
-    }
+
+		public byte[] GetEncKey()
+		{
+			if (this.Type != PacketType.ConnectRequest)
+				return null;
+
+			if (this.Size <= 13)
+				return null;
+
+			byte[] encKey = new byte[this.Size - 13];
+			Buffer.BlockCopy(this.RawData, 13, encKey, 0, this.Size - 13);
+
+			return encKey;
+		}
+	}
 
 }

@@ -2,28 +2,30 @@
 using System.Text;
 
 using ReliableUdp.BitUtility;
+using ReliableUdp.Encryption;
 using ReliableUdp.Enums;
 using ReliableUdp.Packet;
 
 namespace ReliableUdp.PacketHandler
 {
-    public class ConnectionRequestHandler
+	public class ConnectionRequestHandler
 	{
 		public const int PROTOCOL_ID = 2;
-
+		private readonly PacketEncryptionSystem packetEncryptionSystem;
 		private int connectAttempts;
 		private int connectTimer = 0;
 
-        public ConnectionState ConnectionState { get; private set; } = ConnectionState.InProgress;
+		public ConnectionState ConnectionState { get; private set; } = ConnectionState.InProgress;
 
-        public long ConnectId { get; private set; }
+		public long ConnectId { get; private set; }
 
-        public ConnectionRequestHandler()
+		public ConnectionRequestHandler(PacketEncryptionSystem packetEncryptionSystem)
 		{
+			this.packetEncryptionSystem = packetEncryptionSystem;
 			this.connectAttempts = 0;
 		}
 
-		public void Initialize(UdpPeer peer, long connectId)
+		public void Initialize(UdpPeer peer, long connectId, byte[] encKey = null)
 		{
 			if (connectId == 0)
 			{
@@ -34,7 +36,7 @@ namespace ReliableUdp.PacketHandler
 			{
 				this.ConnectId = connectId;
 				this.ConnectionState = ConnectionState.Connected;
-				this.SendConnectAccept(peer);
+				this.SendConnectAccept(peer, encKey);
 			}
 
 #if UDP_DEBUGGING
@@ -44,24 +46,40 @@ namespace ReliableUdp.PacketHandler
 
 		private void SendConnectRequest(UdpPeer peer)
 		{
-			byte[] keyData = Encoding.UTF8.GetBytes(peer.Settings.ConnectKey);
+			int encExtraSize = 0;
+			byte[] encKey = null;
 
-			var connectPacket = peer.GetPacketFromPool(PacketType.ConnectRequest, 12 + keyData.Length);
+			if (this.packetEncryptionSystem != null)
+			{
+				encKey = packetEncryptionSystem.InitializeAes();
+				encExtraSize = encKey.Length;
+			}
+
+			var connectPacket = peer.GetPacketFromPool(PacketType.ConnectRequest, 12 + encExtraSize);
 
 			BitHelper.Write(connectPacket.RawData, 1, PROTOCOL_ID);
 			BitHelper.Write(connectPacket.RawData, 5, this.ConnectId);
-			Buffer.BlockCopy(keyData, 0, connectPacket.RawData, 13, keyData.Length);
 
-			peer.SendRawAndRecycle(connectPacket, peer.EndPoint);
+			if (encExtraSize > 0 && encKey != null)
+			{
+				Buffer.BlockCopy(encKey, 0, connectPacket.RawData, 13, encKey.Length);
+			}
+
+			peer.SendRawAndRecycleForceNoEncryption(connectPacket, peer.EndPoint);
 		}
 
-		private void SendConnectAccept(UdpPeer peer)
+		private void SendConnectAccept(UdpPeer peer, byte[] encKey)
 		{
+			if(encKey != null && this.packetEncryptionSystem != null)
+			{
+				this.packetEncryptionSystem.InitializeAes(encKey);
+			}
+
 			peer.NetworkStatisticManagement.ResetTimeSinceLastPacket();
 
 			var connectPacket = peer.GetPacketFromPool(PacketType.ConnectAccept, 8);
 			BitHelper.Write(connectPacket.RawData, 1, this.ConnectId);
-			peer.SendRawAndRecycle(connectPacket, peer.EndPoint);
+			peer.SendRawAndRecycleForceNoEncryption(connectPacket, peer.EndPoint);
 		}
 
 		public bool ProcessConnectAccept(UdpPeer peer, UdpPacket packet)
@@ -93,7 +111,7 @@ namespace ReliableUdp.PacketHandler
 #if UDP_DEBUGGING
 			Console.WriteLine($"Connect Request Last Id {this.ConnectId} NewId {newId} EP {peer.EndPoint}");
 #endif
-			this.SendConnectAccept(peer);
+			this.SendConnectAccept(peer, packet.GetEncKey());
 			peer.Recycle(packet);
 		}
 
@@ -118,9 +136,9 @@ namespace ReliableUdp.PacketHandler
 
 					this.SendConnectRequest(peer);
 				}
-                this.connectTimer += deltaTime;
+				this.connectTimer += deltaTime;
 
-                return false;
+				return false;
 			}
 
 			return true;
@@ -130,6 +148,7 @@ namespace ReliableUdp.PacketHandler
 		{
 			if (ProcessConnectAccept(peer, packet))
 			{
+				peer.PacketEncryptionSystem.ConnectionAccepted();
 				peer.UdpManager.CreateConnectEvent(peer);
 			}
 
